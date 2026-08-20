@@ -107,7 +107,7 @@ class NeuroSkyBle extends MindSource {
     });
     final finalResults = await completer.future;
     t1.cancel();
-    keepAlive!.cancel();
+    keepAlive.cancel();
     return finalResults;
   }
 
@@ -122,10 +122,7 @@ class NeuroSkyBle extends MindSource {
       ..slot = slot
       ..reset();
 
-    await device.connect(
-      license: License.nonprofit,
-      timeout: const Duration(seconds: 15),
-    );
+    await device.connect(timeout: const Duration(seconds: 15));
     await device.discoverServices();
 
     final services = device.servicesList;

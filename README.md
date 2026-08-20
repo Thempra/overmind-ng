@@ -48,8 +48,6 @@ Incluye también dos analizadores en tiempo real:
 - En **desktop Linux** (o sin hardware) hay un **modo demo** (`SimulatedMindSource`)
   que genera valores EEG plausibles mediante un paseo aleatorio, para poder
   probar todo (análisis y juego con 2 jugadores) sin auricular.
-- `flutter_blue_plus` `connect()` exige el parámetro `License` (se usa
-  `License.nonprofit`, válido para uso personal/no comercial/educativo).
 
 ## Permisos
 
