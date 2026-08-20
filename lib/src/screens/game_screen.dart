@@ -1,5 +1,6 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../game/battle_game.dart';
@@ -26,6 +27,12 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+    // La batalla siempre en horizontal y a pantalla completa (inmersivo).
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _game = BattleGame(
       store: context.read<EegStore>(),
       player1Slot: widget.player1Slot,
@@ -35,6 +42,9 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
+    // Restaurar orientación vertical y UI del sistema al salir.
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _game.shutdown();
     super.dispose();
   }

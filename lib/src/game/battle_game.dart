@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flame/camera.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/flame.dart';
@@ -35,8 +36,10 @@ class BattleGame extends FlameGame with TapCallbacks {
   Fighter? player2;
   final List<Fireball> _fireballs = [];
   Hud? _hud;
+  VsBanner? _vsBanner;
   AudioPlayer? _pew;
   AudioPlayer? _hit;
+  bool _audioOk = false;
 
   double _shake = 0;
   double _vsTimer = 2.2;
@@ -44,10 +47,15 @@ class BattleGame extends FlameGame with TapCallbacks {
 
   bool get gameOver => winner != null;
 
+  // Layout adaptativo: la resolución lógica se ajusta al aspecto real de la
+  // pantalla (altura fija de referencia) para que la imagen rellene sin barras.
+  static const double _refH = 1080;
+  static const double _p1X = 0.14, _p2X = 0.86, _fy = 0.80;
+  Vector2 _res = Vector2(1280, 720);
+  SpriteComponent? _bg;
+
   @override
   Future<void> onLoad() async {
-    camera.viewport.size = Vector2(1920, 1080);
-
     final images = Flame.images;
     final bg = await images.load('game_background2.jpg');
     final eva = await images.load('eva01.png');
@@ -55,19 +63,16 @@ class BattleGame extends FlameGame with TapCallbacks {
     final fbRed = await images.load('fireball.png');
     final fbBlue = await images.load('fireball_blue.png');
 
-    add(SpriteComponent(sprite: Sprite(bg))
-      ..size = camera.viewport.size
+    _bg = SpriteComponent(sprite: Sprite(bg))
       ..position = Vector2.zero()
-      ..priority = 0);
-
-    final w = camera.viewport.size.x;
-    final h = camera.viewport.size.y;
+      ..priority = 0;
+    add(_bg!);
 
     player1 = Fighter(
       image: eva,
       side: 1,
       facing: 1,
-      centerHome: Vector2(260, 860),
+      centerHome: Vector2.zero(),
       flameColor: const Color(0xFF35B6FF),
       ballImage: fbBlue,
     )..priority = 5;
@@ -75,7 +80,7 @@ class BattleGame extends FlameGame with TapCallbacks {
       image: angel,
       side: 2,
       facing: -1,
-      centerHome: Vector2(w - 260, 860),
+      centerHome: Vector2.zero(),
       flameColor: const Color(0xFFFF4B4B),
       ballImage: fbRed,
     )..priority = 5;
@@ -83,21 +88,46 @@ class BattleGame extends FlameGame with TapCallbacks {
     add(player1!);
     add(player2!);
 
-    _hud = Hud()..size = camera.viewport.size;
-    _hud!.priority = 40;
+    _hud = Hud()..priority = 40;
     add(_hud!);
+
+    _vsBanner = VsBanner()..priority = 50;
+    add(_vsBanner!);
 
     try {
       _pew = AudioPlayer();
       await _pew!.setSource(AssetSource('audio/pew_pew_lei.wav'));
       _hit = AudioPlayer();
       await _hit!.setSource(AssetSource('audio/pew_pew_lei.wav'));
+      _audioOk = true;
     } catch (_) {
+      _audioOk = false;
       _pew = null;
       _hit = null;
     }
 
+    _layout();
     return super.onLoad();
+  }
+
+  @override
+  void onGameResize(Vector2 gameSize) {
+    super.onGameResize(gameSize);
+    _layout();
+  }
+
+  /// Recalcula la resolución lógica según el aspecto real y reposiciona todo.
+  void _layout() {
+    if (size.x <= 0 || size.y <= 0) return;
+    _res = Vector2(size.x * _refH / size.y, _refH);
+    camera.viewport = FixedResolutionViewport(resolution: _res);
+    _bg?.size = _res;
+    player1?.centerHome.setValues(_res.x * _p1X, _res.y * _fy);
+    player2?.centerHome.setValues(_res.x * _p2X, _res.y * _fy);
+    player1?.applyHome();
+    player2?.applyHome();
+    _hud?.size = _res;
+    _vsBanner?.size = _res;
   }
 
   @override
@@ -129,8 +159,15 @@ class BattleGame extends FlameGame with TapCallbacks {
     _fireballs.add(ball);
     from.charge = 0;
     from.recoil = 0.15;
-    _pew?.seek(Duration.zero);
-    _pew?.resume();
+    _playFire();
+  }
+
+  void _playFire() {
+    if (!_audioOk || _pew == null) return;
+    try {
+      _pew!.seek(Duration.zero);
+      _pew!.resume();
+    } catch (_) {}
   }
 
   void _explode(Vector2 at, Color color, double power) {
@@ -165,8 +202,10 @@ class BattleGame extends FlameGame with TapCallbacks {
 
     if (_vsTimer > 0) {
       _vsTimer -= dt;
+      _vsBanner?.remaining = _vsTimer;
       return;
     }
+    _vsBanner?.remaining = 0;
     if (gameOver) return;
 
     // Refrescar los datos EEG de cada luchador y lanzar bolas según atención.
@@ -176,7 +215,7 @@ class BattleGame extends FlameGame with TapCallbacks {
     player2!.updateFighter(dt, _fire);
 
     // Avanzar proyectiles y detectar impactos.
-    final w = camera.viewport.size.x;
+    final w = _res.x;
     for (final ball in _fireballs) {
       ball.move(dt);
       final target = _opponentOf(_fighterOf(ball)!);
@@ -213,8 +252,11 @@ class BattleGame extends FlameGame with TapCallbacks {
     _explode(ball.position.clone(), ball.color, ball.power / 10 + 1);
     _shake = 8;
     _hud!.flash(ball.side, absorbed > 0);
-    _hit?.seek(Duration.zero);
-    _hit?.resume();
+    if (!_audioOk || _hit == null) return;
+    try {
+      _hit!.seek(Duration.zero);
+      _hit!.resume();
+    } catch (_) {}
   }
 
   void _endGame(int winnerSide) {
@@ -329,6 +371,11 @@ class Fighter extends PositionComponent {
     hp = 100;
     shield = 0;
     charge = 0;
+    position.setFrom(centerHome - size / 2);
+  }
+
+  /// Sitúa al luchador en su posición base (usado al re-posicionar el layout).
+  void applyHome() {
     position.setFrom(centerHome - size / 2);
   }
 
@@ -641,6 +688,59 @@ class Hud extends PositionComponent {
     pb.addText(text);
     final para = pb.build()
       ..layout(ParagraphConstraints(width: width));
+    canvas.drawParagraph(para, Offset(x, y));
+  }
+}
+
+// ===========================================================================
+//  VsBanner — cartel de presentación del combate (EVA-01 vs SACHIEL)
+// ===========================================================================
+class VsBanner extends PositionComponent {
+  /// Tiempo restante del cartel; el juego lo actualiza cada frame.
+  double remaining = 2.2;
+
+  @override
+  void render(Canvas canvas) {
+    if (remaining <= 0) return;
+    final cx = size.x / 2;
+    final cy = size.y * 0.40;
+    final alpha = remaining < 0.6 ? (remaining / 0.6).clamp(0.0, 1.0) : 1.0;
+
+    // Scrim oscuro para hacer resaltar el cartel.
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y),
+        Paint()..color = Color(0x66000000).withOpacity(alpha));
+
+    // Líneas decorativas horizontales.
+    final line = Paint()
+      ..color = Color(0x88FFFFFF).withOpacity(alpha)
+      ..strokeWidth = 3;
+    canvas.drawLine(Offset(0, cy + 40), Offset(cx - 40, cy + 40), line..strokeWidth = 3);
+    canvas.drawLine(Offset(cx + 40, cy + 40), Offset(size.x, cy + 40), line..strokeWidth = 3);
+
+    _text(canvas, 'EVA-01', cx - 340, cy - 30, 54, Color(0xFF35B6FF).withOpacity(alpha), 320, TextAlign.right);
+    _text(canvas, 'VS', cx - 60, cy - 16, 72, Color(0xFFFFFFFF).withOpacity(alpha), 120, TextAlign.center);
+    _text(canvas, 'SACHIEL', cx + 20, cy - 30, 54, Color(0xFFFF4B4B).withOpacity(alpha), 320, TextAlign.left);
+
+    if (remaining < 1.1) {
+      final pulse = 0.7 + 0.3 * math.sin(remaining * 22);
+      _text(canvas, '¡PELEA!', cx - 150, cy + 70, 46,
+          Color(0xFFFFFF00).withOpacity(alpha * pulse), 300, TextAlign.center);
+    }
+  }
+
+  void _text(Canvas canvas, String text, double x, double y, double size,
+      Color color, double width, TextAlign align) {
+    final pb = ParagraphBuilder(ParagraphStyle(textAlign: align));
+    pb.pushStyle(TextStyle(
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.w900,
+      shadows: const [
+        Shadow(color: Color(0xDD000000), blurRadius: 6, offset: Offset(2, 2)),
+      ],
+    ));
+    pb.addText(text);
+    final para = pb.build()..layout(ParagraphConstraints(width: width));
     canvas.drawParagraph(para, Offset(x, y));
   }
 }
