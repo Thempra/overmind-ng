@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -49,66 +50,174 @@ class NeuroSkyBle extends MindSource {
   @override
   Stream<EegData> get stream => _controller.stream;
 
+  /// Nivel de API de Android, leído de forma fiable con `device_info_plus`
+  /// (NO se parsea la cadena de sistema operativo, que es frágil).
+  /// 0 si no se puede determinar.
+  static Future<int> _androidSdkInt() async {
+    try {
+      final info = await DeviceInfoPlugin().androidInfo;
+      return info.version.sdkInt;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   /// Solicita y comprueba los permisos de Bluetooth (Android).
-  static Future<bool> ensurePermissions() async {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      for (final p in [
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        Permission.location,
-      ]) {
+  ///
+  /// Android 12+ (API 31+) usa `BLUETOOTH_SCAN` + `BLUETOOTH_CONNECT` como
+  /// permisos en runtime y NO necesita ubicación (el manifest declara
+  /// `neverForLocation`). Android ≤ 11 (API ≤ 30) sí exige ubicación para
+  /// escanear BLE (allí los permisos BLE son automáticos, en la instalación).
+  ///
+  /// Devuelve `null` si todo está en orden, o un mensaje si falta un permiso
+  /// imprescindible (entonces no se puede escanear).
+  static Future<String?> ensurePermissions() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+
+    final sdk = await _androidSdkInt();
+    if (sdk >= 31) {
+      // Android 12+: solo hacen falta los permisos BLE runtime.
+      for (final p in [Permission.bluetoothScan, Permission.bluetoothConnect]) {
         if (!await p.isGranted) {
           final res = await p.request();
-          if (!res.isGranted) return false;
+          if (!res.isGranted && !res.isPermanentlyDenied) {
+            return 'Permiso Bluetooth denegado';
+          }
+          if (res.isPermanentlyDenied) {
+            // Abrimos ajustes del sistema para que el usuario lo habilite.
+            await openAppSettings();
+            return 'Activa el permiso Bluetooth en los ajustes';
+          }
+        }
+      }
+    } else {
+      // Android ≤ 11: escanear BLE exige acceso a ubicación.
+      if (!await Permission.location.isGranted) {
+        final res = await Permission.location.request();
+        if (!res.isGranted && !res.isPermanentlyDenied) {
+          return 'Permiso de ubicación denegado';
+        }
+        if (res.isPermanentlyDenied) {
+          await openAppSettings();
+          return 'Activa el permiso de ubicación en los ajustes';
         }
       }
     }
-    return true;
+    return null;
+  }
+
+  /// Lista los dispositivos ya vinculados (bonded) en el sistema Android.
+  ///
+  /// Ordena alfabéticamente por nombre. No requiere escaneo previo. Los que
+  /// solo tienen MAC (sin nombre) se descartan, igual que en el escaneo.
+  static Future<List<MindDevice>> bonded() async {
+    final devices = await FlutterBluePlus.bondedDevices;
+    final list = <MindDevice>[];
+    for (final d in devices) {
+      if (d.platformName.trim().isEmpty) continue; // solo con nombre
+      list.add(MindDevice(d, 0, const []));
+    }
+    list.sort(
+      (a, b) =>
+          a.device.platformName.toLowerCase().compareTo(
+                b.device.platformName.toLowerCase(),
+              ),
+    );
+    return list;
   }
 
   /// Escanea dispositivos BLE cercanos hasta `timeout`.
-  static Future<List<MindDevice>> scan({Duration timeout = const Duration(seconds: 15)}) async {
+  ///
+  /// Solo se conservan dispositivos que publican un nombre (`platformName` no
+  /// vacío); los anuncios que únicamente traen MAC (sin nombre) se descartan,
+  /// tal y como se pide en la UI.
+  ///
+  /// Publica resultados en vivo a través de `onResult` (para que la UI pueda
+  /// mostrarlos mientras escanea) y devuelve la lista final ordenada por RSSI
+  /// y sin duplicados.
+  ///
+  /// Implementación robusta: en lugar de gestionar temporizadores y un
+  /// `Completer` propios (que podían dejar el escaneo colgado si `stopScan`
+  /// fallaba), se apoya en el timeout interno de `startScan(timeout:)` y se
+  /// limita a esperar a que el plugin detenga el escaneo por sí mismo.
+  static Future<List<MindDevice>> scan({
+    Duration timeout = const Duration(seconds: 10),
+    void Function(List<MindDevice>)? onResult,
+    /// Si true (por defecto), descarta los dispositivos que no publican
+    /// nombre (solo transmiten MAC).
+    bool onlyNamed = true,
+  }) async {
+    // 1) Asegurar que el adaptador BLE está activo.
     if (FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on) {
-      await FlutterBluePlus.turnOn();
+      try {
+        await FlutterBluePlus.turnOn();
+      } catch (_) {
+        // Si no se puede encender seguimos; startScan notificará el error.
+      }
     }
-    await FlutterBluePlus.startScan(timeout: timeout);
-    final completer = Completer<List<MindDevice>>();
-    final results = <MindDevice>[];
-    final sub = FlutterBluePlus.scanResults.listen((list) {
-      results.clear();
+    if (FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on) {
+      try {
+        await FlutterBluePlus.adapterState
+            .timeout(timeout)
+            .firstWhere((s) => s == BluetoothAdapterState.on);
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    final seen = <String, MindDevice>{};
+
+    void pushCurrent() {
+      final sorted = seen.values.toList()
+        ..sort((a, b) => b.rssi.compareTo(a.rssi));
+      onResult?.call(sorted);
+    }
+
+    // 2) Limpiar un posible escaneo residual del plugin antes de empezar.
+    if (FlutterBluePlus.isScanningNow) {
+      try {
+        await FlutterBluePlus.stopScan();
+      } catch (_) {}
+    }
+
+    // 3) Escuchar resultados en vivo. `onScanResults` no re-emite resultados
+    //    de escaneos anteriores, así que empezamos con una lista limpia.
+    final sub = FlutterBluePlus.onScanResults.listen((list) {
       for (final r in list) {
-        results.add(MindDevice(
+        // Solo dispositivos con nombre publicado (o se pide mostrar todo).
+        final hasName = r.device.platformName.trim().isNotEmpty ||
+            r.advertisementData.advName.trim().isNotEmpty;
+        if (onlyNamed && !hasName) continue;
+        seen[r.device.remoteId.str] = MindDevice(
           r.device,
           r.rssi,
           r.advertisementData.serviceUuids.map((u) => u.str).toList(),
-        ));
+        );
       }
+      pushCurrent();
     });
-    // Esperamos o el timeout o un resultado que parezca MindWave.
-    Timer? keepAlive;
-    keepAlive = Timer(timeout, () async {
-      sub.cancel();
-      await FlutterBluePlus.stopScan();
-      completer.complete(results);
-    });
-    // Detectamos dispositivos ThinkGear/NeuroSky por servicios conocidos
-    // (0xFFF0) o por nombre que contenga "mind"/"wave"/"eeg".
-    final t1 = Timer(const Duration(seconds: 5), () async {
-      for (final r in results) {
-        final n = r.device.platformName.toLowerCase();
-        if (n.contains('mind') || n.contains('wave') || n.contains('eeg')) {
-          keepAlive?.cancel();
-          sub.cancel();
+
+    try {
+      // 4) startScan con su propio timeout; el plugin se auto-detiene.
+      await FlutterBluePlus.startScan(timeout: timeout);
+
+      // 5) Esperar a que el plugin termine el escaneo (timeout interno).
+      while (FlutterBluePlus.isScanningNow) {
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+      }
+    } finally {
+      await sub.cancel();
+      if (FlutterBluePlus.isScanningNow) {
+        try {
           await FlutterBluePlus.stopScan();
-          completer.complete(results);
-          return;
-        }
+        } catch (_) {}
       }
-    });
-    final finalResults = await completer.future;
-    t1.cancel();
-    keepAlive.cancel();
-    return finalResults;
+    }
+
+    pushCurrent();
+    final sorted = seen.values.toList()
+      ..sort((a, b) => b.rssi.compareTo(a.rssi));
+    return sorted;
   }
 
   @override
@@ -122,7 +231,23 @@ class NeuroSkyBle extends MindSource {
       ..slot = slot
       ..reset();
 
-    await device.connect(timeout: const Duration(seconds: 15));
+    // 1) Intento directo (rápido si el dispositivo está anunciando).
+    var ok = await _connectAttempt(
+      autoConnect: false,
+      timeout: const Duration(seconds: 12),
+    );
+    // 2) Fallback para dispositivos ya vinculados (bonded): autoConnect usa el
+    //    vínculo guardado por Android y conecta aunque no esté anunciando.
+    if (!ok) {
+      ok = await _connectAttempt(
+        autoConnect: true,
+        timeout: const Duration(seconds: 25),
+      );
+    }
+    if (!ok) {
+      throw StateError('No se pudo conectar al dispositivo BLE');
+    }
+
     await device.discoverServices();
 
     final services = device.servicesList;
@@ -136,6 +261,42 @@ class NeuroSkyBle extends MindSource {
           } catch (_) {}
         }
       }
+    }
+  }
+
+  /// Intenta una conexión. Con `autoConnect: true` el plugin devuelve
+  /// inmediatamente, así que esperamos el estado `connected` por la vía del
+  /// stream. Devuelve `true` solo si llega a conectarse.
+  Future<bool> _connectAttempt({
+    required bool autoConnect,
+    required Duration timeout,
+  }) async {
+    if (!autoConnect) {
+      try {
+        await device.connect(timeout: timeout, mtu: 512, autoConnect: false);
+        return device.isConnected;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    // autoConnect: esperar el evento de conexión.
+    final completer = Completer<bool>();
+    late StreamSubscription<BluetoothConnectionState> sub;
+    sub = device.connectionState.listen((state) {
+      if (state == BluetoothConnectionState.connected &&
+          !completer.isCompleted) {
+        completer.complete(true);
+      }
+    });
+    try {
+      await device.connect(timeout: timeout, mtu: null, autoConnect: true);
+      return await completer.future
+          .timeout(timeout, onTimeout: () => false);
+    } catch (_) {
+      return false;
+    } finally {
+      await sub.cancel();
     }
   }
 

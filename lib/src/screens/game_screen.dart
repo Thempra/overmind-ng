@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../game/battle_game.dart';
+import '../state/battle_theme_controller.dart';
 import '../state/eeg_store.dart';
 
 /// Pantalla que aloja el [BattleGame] (FLAME) con el overlay de fin de partida.
@@ -37,6 +38,7 @@ class _GameScreenState extends State<GameScreen> {
       store: context.read<EegStore>(),
       player1Slot: widget.player1Slot,
       player2Slot: widget.player2Slot,
+      theme: context.read<BattleThemeController>().theme,
     );
   }
 

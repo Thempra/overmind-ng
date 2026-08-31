@@ -13,6 +13,7 @@ class EegStore extends ChangeNotifier {
   final List<MindSource?> _sources = List.filled(maxDevices, null);
 
   bool _scanning = false;
+  String? _permissionError;
   List<MindDevice> _discovered = [];
   bool _bleAvailable = false;
 
@@ -21,6 +22,10 @@ class EegStore extends ChangeNotifier {
   bool get isScanning => _scanning;
   List<MindDevice> get discovered => List.unmodifiable(_discovered);
   bool get bleAvailable => _bleAvailable;
+
+  /// Mensaje legible si el último escaneo no pudo arrancar por permisos;
+  /// null si se pudo escanear.
+  String? get permissionError => _permissionError;
 
   int? get nextFreeSlot {
     for (var i = 0; i < maxDevices; i++) {
@@ -45,16 +50,24 @@ class EegStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Escanea dispositivos BLE cercanos.
+  /// Escanea dispositivos BLE cercanos. Publica los resultados en vivo en
+  /// `discovered` (notificando a la UI) y devuelve la lista final.
   Future<List<MindDevice>> scanBle() async {
     _scanning = true;
+    _permissionError = null;
+    _discovered = const [];
     notifyListeners();
     try {
-      if (!await NeuroSkyBle.ensurePermissions()) {
+      final permErr = await NeuroSkyBle.ensurePermissions();
+      if (permErr != null) {
+        _permissionError = permErr;
         _discovered = const [];
         return _discovered;
       }
-      final found = await NeuroSkyBle.scan();
+      final found = await NeuroSkyBle.scan(onResult: (devices) {
+        _discovered = devices;
+        notifyListeners();
+      });
       _discovered = found;
       return found;
     } finally {
@@ -63,24 +76,41 @@ class EegStore extends ChangeNotifier {
     }
   }
 
+  /// Carga los dispositivos ya vinculados (bonded) por Android y los deja en
+  /// `discovered` para que el usuario pueda conectarse a ellos sin escanear.
+  Future<List<MindDevice>> loadBonded() async {
+    _permissionError = null;
+    try {
+      final found = await NeuroSkyBle.bonded();
+      _discovered = found;
+      notifyListeners();
+      return found;
+    } catch (e) {
+      _discovered = const [];
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   /// Conecta un dispositivo BLE descubierto en el primer slot libre.
-  Future<bool> connectBle(MindDevice device) async {
+  /// Devuelve null si no hay slot libre; si la conexión falla, propaga la
+  /// excepción (el UI la mostrará) y limpia el slot.
+  Future<void> connectBle(MindDevice device) async {
     final slot = nextFreeSlot;
-    if (slot == null) return false;
+    if (slot == null) {
+      throw StateError('No hay slots libres (máximo $maxDevices)');
+    }
     final src = NeuroSkyBle(device.device, slot: slot);
     _sources[slot] = src;
     _devices[slot] = src.eeg;
     notifyListeners();
     try {
       await src.connect();
-      return true;
     } catch (e) {
       _sources[slot] = null;
       _devices[slot] = null;
       notifyListeners();
-      // ignore: avoid_print
-      debugPrint('BLE connect failed: $e');
-      return false;
+      rethrow;
     }
   }
 
