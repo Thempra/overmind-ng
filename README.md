@@ -1,6 +1,7 @@
-# Overmind (Flutter)
+# Overmind NG
 
-Port a **Flutter** del proyecto Android **overmind-android** (NeuroSky/MindWave EEG).
+Siguiente generación del proyecto Android **overmind-android** (NeuroSky/MindWave EEG),
+reescrito en **Flutter**.
 Corre en **Android**, **iOS** y **Linux desktop**, con pila **BLE** para el EEG y
 **FLAME** como motor de gráficos del juego.
 
