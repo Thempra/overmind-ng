@@ -1,7 +1,10 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
+
+import '../eeg/eeg_data.dart';
+import '../eeg/thinkgear_parser.dart';
+import 'mind_source.dart';
 
 /// Dispositivo Classic/SPP vinculado devuelto por el canal nativo.
 class SppDevice {
@@ -86,5 +89,88 @@ class SppClient {
         }
       }
     });
+  }
+}
+
+/// Fuente EEG por Bluetooth Classic SPP (RFCOMM), p. ej. ThempraEEG.
+///
+/// Mismo contrato que [NeuroSkyBle]: los bytes SPP alimentan el mismo
+/// `ThinkGearParser` (protocolo ThinkGear idéntico al BLE).
+class SppMindSource extends MindSource {
+  SppMindSource({
+    required this.address,
+    required this.deviceName,
+    required this.slot,
+    SppClient? client,
+  }) : _client = client ?? SppClient.instance;
+
+  final String address;
+  final String deviceName;
+  final int slot;
+  final SppClient _client;
+
+  final EegData _eeg = EegData(address: '', name: '', slot: 0);
+  final ThinkGearParser _parser = ThinkGearParser();
+  final _controller = StreamController<EegData>.broadcast();
+
+  StreamSubscription<Uint8List>? _bytesSub;
+  StreamSubscription<void>? _closedSub;
+
+  @override
+  String get id => address;
+
+  @override
+  String get name => deviceName.isNotEmpty ? deviceName : address;
+
+  @override
+  EegData get eeg => _eeg;
+
+  @override
+  Stream<EegData> get stream => _controller.stream;
+
+  @override
+  Future<void> connect() async {
+    _eeg
+      ..address = address
+      ..name = name
+      ..slot = slot
+      ..reset();
+    await _client.connect(address);
+    _bytesSub = _client.bytes(address).listen(_onBytes, onError: (_) {});
+    _closedSub = _client.closed(address).listen((_) {});
+  }
+
+  void _onBytes(Uint8List data) {
+    final captures = _parser.addBytes(data);
+    for (final c in captures) {
+      _eeg.applyCapture(
+        signal: c.poorSignal,
+        attention: c.attention,
+        meditation: c.meditation,
+        rawDelta: c.rawDelta.toDouble(),
+        rawTheta: c.rawTheta.toDouble(),
+        rawLowAlpha: c.rawLowAlpha.toDouble(),
+        rawHighAlpha: c.rawHighAlpha.toDouble(),
+        rawLowBeta: c.rawLowBeta.toDouble(),
+        rawHighBeta: c.rawHighBeta.toDouble(),
+        rawLowGamma: c.rawLowGamma.toDouble(),
+        rawHighGamma: c.rawHighGamma.toDouble(),
+      );
+      if (!_controller.isClosed) _controller.add(_eeg);
+    }
+  }
+
+  @override
+  Future<void> disconnect() async {
+    await _bytesSub?.cancel();
+    _bytesSub = null;
+    await _closedSub?.cancel();
+    _closedSub = null;
+    await _client.disconnect(address);
+  }
+
+  void dispose() {
+    disconnect();
+    _controller.close();
   }
 }
