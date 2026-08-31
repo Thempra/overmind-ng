@@ -39,7 +39,7 @@ ThemeData overmindTheme() {
       elevation: 0,
       foregroundColor: OvermindColors.text,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: OvermindColors.panel,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
