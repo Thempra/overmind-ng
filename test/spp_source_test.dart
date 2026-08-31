@@ -41,7 +41,7 @@ class FakeSppClient extends SppClient {
 void main() {
   group('MindDevice', () {
     test('.spp expone id, name e isClassic', () {
-      final d = const MindDevice.spp('00:11:22:33:44:55', 'ThempraEEG');
+      const d = MindDevice.spp('00:11:22:33:44:55', 'ThempraEEG');
       expect(d.isClassic, isTrue);
       expect(d.id, '00:11:22:33:44:55');
       expect(d.name, 'ThempraEEG');
