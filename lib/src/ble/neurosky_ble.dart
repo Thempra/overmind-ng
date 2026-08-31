@@ -9,12 +9,36 @@ import '../eeg/eeg_data.dart';
 import '../eeg/thinkgear_parser.dart';
 import 'mind_source.dart';
 
-/// Resultado de escaneo BLE.
+/// Resultado de escaneo o vínculo: dispositivo BLE (LE) o Classic/SPP.
 class MindDevice {
-  const MindDevice(this.device, this.rssi, this.serviceUuids);
-  final BluetoothDevice device;
+  MindDevice.ble(BluetoothDevice device, this.rssi, this.serviceUuids)
+    : bleDevice = device,
+      isClassic = false,
+      _sppId = null,
+      _sppName = null;
+
+  const MindDevice.spp(String id, String name)
+    : bleDevice = null,
+      isClassic = true,
+      rssi = 0,
+      serviceUuids = const [],
+      _sppId = id,
+      _sppName = name;
+
+  /// Dispositivo FBP subyacente (null si es Classic).
+  final BluetoothDevice? bleDevice;
+  final bool isClassic;
   final int rssi;
   final List<String> serviceUuids;
+  final String? _sppId;
+  final String? _sppName;
+
+  String get id => isClassic ? _sppId! : bleDevice!.remoteId.str;
+  String get name {
+    if (isClassic) return _sppName!;
+    final n = bleDevice!.platformName;
+    return n.isNotEmpty ? n : bleDevice!.remoteId.str;
+  }
 }
 
 /// Gestor BLE real para MindWave Mobile 2 (y dispositivos ThinkGear BLE).
@@ -115,13 +139,10 @@ class NeuroSkyBle extends MindSource {
     final list = <MindDevice>[];
     for (final d in devices) {
       if (d.platformName.trim().isEmpty) continue; // solo con nombre
-      list.add(MindDevice(d, 0, const []));
+      list.add(MindDevice.ble(d, 0, const []));
     }
     list.sort(
-      (a, b) =>
-          a.device.platformName.toLowerCase().compareTo(
-                b.device.platformName.toLowerCase(),
-              ),
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
     );
     return list;
   }
@@ -188,7 +209,7 @@ class NeuroSkyBle extends MindSource {
         final hasName = r.device.platformName.trim().isNotEmpty ||
             r.advertisementData.advName.trim().isNotEmpty;
         if (onlyNamed && !hasName) continue;
-        seen[r.device.remoteId.str] = MindDevice(
+        seen[r.device.remoteId.str] = MindDevice.ble(
           r.device,
           r.rssi,
           r.advertisementData.serviceUuids.map((u) => u.str).toList(),
