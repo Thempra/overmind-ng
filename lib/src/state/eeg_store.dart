@@ -2,11 +2,17 @@ import 'package:flutter/foundation.dart';
 
 import '../ble/mind_source.dart';
 import '../ble/neurosky_ble.dart';
+import '../ble/spp_mind_source.dart';
 import '../eeg/eeg_data.dart';
 
 /// Almacén global de dispositivos EEG conectados (hasta 8 slots, igual que el
 /// MAX_NUM_BLUETOOTH del original) y orquestador de conexiones BLE/simuladas.
 class EegStore extends ChangeNotifier {
+  EegStore({SppClient? sppClient})
+    : _sppClient = sppClient ?? SppClient.instance;
+
+  final SppClient _sppClient;
+
   static const maxDevices = 8;
 
   final List<EegData?> _devices = List.filled(maxDevices, null);
@@ -76,20 +82,43 @@ class EegStore extends ChangeNotifier {
     }
   }
 
-  /// Carga los dispositivos ya vinculados (bonded) por Android y los deja en
-  /// `discovered` para que el usuario pueda conectarse a ellos sin escanear.
+  /// Carga los dispositivos vinculados: LE (FPB) + Classic/SPP (canal nativo,
+  /// solo Android). FBP también devuelve los Classic, así que se deduplican.
   Future<List<MindDevice>> loadBonded() async {
     _permissionError = null;
     try {
-      final found = await NeuroSkyBle.bonded();
-      _discovered = found;
+      final ble = await NeuroSkyBle.bonded();
+      var spp = <SppDevice>[];
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          spp = await _sppClient.devices();
+        } on Exception {
+          spp = <SppDevice>[]; // canal no disponible: seguimos solo con LE
+        }
+      }
+      _discovered = mergeBonded(ble, spp);
       notifyListeners();
-      return found;
+      return _discovered;
     } catch (e) {
       _discovered = const [];
       notifyListeners();
       rethrow;
     }
+  }
+
+  /// Fusión pura: quita de la lista BLE los que ya vienen por SPP (misma MAC)
+  /// y ordena todo alfabéticamente por nombre.
+  static List<MindDevice> mergeBonded(
+    List<MindDevice> ble,
+    List<SppDevice> spp,
+  ) {
+    final sppAddresses = spp.map((d) => d.address).toSet();
+    return <MindDevice>[
+      ...ble.where((d) => !sppAddresses.contains(d.id)),
+      ...spp.map((d) => MindDevice.spp(d.address, d.name)),
+    ]..sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
   }
 
   /// Conecta un dispositivo BLE descubierto en el primer slot libre.
@@ -100,7 +129,15 @@ class EegStore extends ChangeNotifier {
     if (slot == null) {
       throw StateError('No hay slots libres (máximo $maxDevices)');
     }
-    final src = NeuroSkyBle(device.device, slot: slot);
+    final src =
+        device.isClassic
+            ? SppMindSource(
+              address: device.id,
+              deviceName: device.name,
+              slot: slot,
+              client: _sppClient,
+            )
+            : NeuroSkyBle(device.bleDevice!, slot: slot);
     _sources[slot] = src;
     _devices[slot] = src.eeg;
     notifyListeners();

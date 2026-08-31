@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:overmind/src/ble/neurosky_ble.dart';
 import 'package:overmind/src/ble/spp_mind_source.dart';
 import 'package:overmind/src/eeg/eeg_data.dart';
+import 'package:overmind/src/state/eeg_store.dart';
 
 /// Helper: paquete ThinkGear válido [0xAA, 0xAA, PLENGTH, payload, checksum].
 Uint8List buildPacket(List<int> payload) {
@@ -106,6 +107,32 @@ void main() {
         client: fake,
       );
       expect(src.name, '00:12:02:10:71:49');
+    });
+  });
+
+  group('EegStore', () {
+    test('connectBle enruta un dispositivo Classic a SppMindSource', () async {
+      final fake = FakeSppClient();
+      final store = EegStore(sppClient: fake);
+      await store.connectBle(
+        const MindDevice.spp('00:12:02:10:71:49', 'ThempraEEG'),
+      );
+      expect(store.sources[0], isA<SppMindSource>());
+      expect(store.devices[0]?.address, '00:12:02:10:71:49');
+      expect(store.devices[0]?.name, 'ThempraEEG');
+      expect(store.devices[0]?.slot, 0);
+    });
+
+    test('mergeBonded ordena por nombre y marca los Classic', () {
+      final ble = <MindDevice>[]; // MindDevice.ble requiere FBP: solo SPP aquí
+      final spp = <SppDevice>[
+        const SppDevice(address: 'A', name: 'Uno'),
+        const SppDevice(address: 'B', name: 'Dos'),
+      ];
+      final merged = EegStore.mergeBonded(ble, spp);
+      expect(merged, hasLength(2));
+      expect(merged.every((d) => d.isClassic), isTrue);
+      expect(merged.map((d) => d.name), ['Dos', 'Uno']);
     });
   });
 }
