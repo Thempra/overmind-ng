@@ -50,7 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _connect(EegStore store, MindDevice d) async {
-    setState(() => _connectingId = d.device.remoteId.str);
+    setState(() => _connectingId = d.id);
     try {
       await store.connectBle(d);
     } catch (e) {
@@ -325,17 +325,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.bluetooth,
-                  color: OvermindColors.evaCyan, size: 20),
+              Icon(
+                d.isClassic ? Icons.cable : Icons.bluetooth,
+                color: OvermindColors.evaCyan,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      d.device.platformName.isNotEmpty
-                          ? d.device.platformName
-                          : d.device.remoteId.str,
+                      d.name,
                       style: const TextStyle(
                         color: OvermindColors.text,
                         fontWeight: FontWeight.w600,
@@ -343,7 +344,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      d.rssi != 0 ? '${d.rssi} dBm' : s.bondedLabel,
+                      d.isClassic
+                          ? 'SPP'
+                          : (d.rssi != 0
+                                ? '${d.rssi} dBm'
+                                : s.bondedLabel),
                       style: const TextStyle(
                         color: OvermindColors.textDim,
                         fontSize: 12,
@@ -359,10 +364,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   visualDensity: VisualDensity.compact,
                 ),
-                onPressed: _connectingId == d.device.remoteId.str
+                onPressed: _connectingId == d.id
                     ? null
                     : () => _connect(store, d),
-                child: _connectingId == d.device.remoteId.str
+                child: _connectingId == d.id
                     ? const SizedBox(
                         width: 14,
                         height: 14,
