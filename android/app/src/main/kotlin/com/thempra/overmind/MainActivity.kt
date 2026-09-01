@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -141,6 +142,15 @@ class MainActivity : FlutterActivity() {
                 if (n == -1) break
                 if (n > 0) {
                     val chunk = buffer.copyOf(n)
+                    Log.d(
+                        "OvermindSPP",
+                        "read %d bytes: %s".format(
+                            n,
+                            chunk.take(48).joinToString(" ") {
+                                "%02X".format(it)
+                            },
+                        ),
+                    )
                     runOnUiThread {
                         eventSink?.success(
                             mapOf("address" to address, "bytes" to chunk)
