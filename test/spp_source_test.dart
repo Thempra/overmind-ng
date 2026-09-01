@@ -8,13 +8,14 @@ import 'package:overmind/src/eeg/eeg_data.dart';
 import 'package:overmind/src/state/eeg_store.dart';
 
 /// Helper: paquete ThinkGear válido [0xAA, 0xAA, PLENGTH, payload, checksum].
+/// Checksum = complemento a uno de la suma del payload (protocolo TGAM real).
 Uint8List buildPacket(List<int> payload) {
   var sum = 0;
   for (final b in payload) {
     sum += b;
   }
   return Uint8List.fromList(
-    [0xAA, 0xAA, payload.length, ...payload, (0x100 - (sum & 0xFF)) & 0xFF],
+    [0xAA, 0xAA, payload.length, ...payload, (~(sum & 0xFF)) & 0xFF],
   );
 }
 
@@ -71,9 +72,9 @@ void main() {
       expect(src.eeg.address, '00:11:22:33:44:55');
 
       fake.bytesCtl.add(buildPacket([
-        0x02, 0x01, 0x00,
-        0x04, 0x01, 0x50,
-        0x05, 0x01, 0x32,
+        0x02, 0x00,
+        0x04, 0x50,
+        0x05, 0x32,
       ]));
       await Future<void>.delayed(Duration.zero);
 

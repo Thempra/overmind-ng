@@ -38,12 +38,13 @@ class MindWaveCapture {
 /// que pueden fragmentar o juntar varios paquetes, así que este parser acumula
 /// bytes y extrae paquetes completos [Sync, Sync, PLENGTH, Payload, Checksum].
 ///
-/// Códigos de payload soportados:
-///  0x02 POOR_SIGNAL (1B)
-///  0x04 ATTENTION   (1B)
-///  0x05 MEDITATION  (1B)
-///  0x80 RAW_WAVE    (2B le)      — se ignora, no afecta a la captura
-///  0x83 ASIC_EEG_POWER (24B, 8 bandas big-endian)
+/// Códigos de payload soportados (formato TGAM real, verificado con hardware):
+///  0x02 POOR_SIGNAL (1B, sin byte de longitud)
+///  0x04 ATTENTION   (1B, sin byte de longitud)
+///  0x05 MEDITATION  (1B, sin byte de longitud)
+///  0x80 RAW_WAVE    [0x80][0x02][2B le]  — se ignora
+///  0x83 ASIC_EEG_POWER [0x83][0x18][24B, 8 bandas big-endian]
+/// El checksum es el complemento a UNO de la suma del payload.
 class ThinkGearParser {
   final Uint8List _buf;
   int _len = 0;
@@ -73,13 +74,15 @@ class ThinkGearParser {
       final pLength = _buf[2];
       if (_len == 4 + pLength) {
         // Frame completo: 2 sync + 1 PLENGTH + pLength payload + 1 checksum.
-        // Verificamos el checksum del payload.
+        // El checksum del protocolo TGAM real es el COMPLEMENTO A UNO de la
+        // suma del payload (verificado contra hardware ThempraEEG):
+        // (suma_baja + checksum) & 0xFF == 0xFF.
         var sum = 0;
         for (var j = 3; j < 3 + pLength; j++) {
           sum += _buf[j] & 0xFF;
         }
         final checksum = _buf[3 + pLength] & 0xFF;
-        final valid = ((sum & 0xFF) + checksum) & 0xFF == 0;
+        final valid = ((sum & 0xFF) + checksum) & 0xFF == 0xFF;
         if (valid) {
           _out.add(_decodePayload(pLength));
         }
@@ -100,37 +103,44 @@ class ThinkGearParser {
     var rawLowBeta = 0, rawHighBeta = 0;
     var rawLowGamma = 0, rawHighGamma = 0;
 
+    // Formato REAL TGAM: los códigos de 1 byte (0x02 POOR_SIGNAL, 0x04
+    // ATTENTION, 0x05 MEDITATION) van como [código][valor] SIN byte de
+    // longitud. El resto (0x80 RAW, 0x83 ASIC_EEG_POWER…) lleva
+    // [código][longitud][datos].
     var i = 3;
-    while (i + 1 < 3 + pLength) {
+    while (i < 3 + pLength) {
       final code = _buf[i] & 0xFF;
+      if (code == 0x02 || code == 0x04 || code == 0x05) {
+        if (i + 1 >= 3 + pLength) break;
+        final value = _buf[i + 1] & 0xFF;
+        switch (code) {
+          case 0x02:
+            poorSignal = value;
+          case 0x04:
+            attention = value;
+          case 0x05:
+            meditation = value;
+        }
+        i += 2;
+        continue;
+      }
+      if (i + 1 >= 3 + pLength) break;
       final len = _buf[i + 1] & 0xFF;
       final valueStart = i + 2;
       if (valueStart + len > 3 + pLength) break;
 
-      switch (code) {
-        case 0x02: // POOR_SIGNAL
-          if (len >= 1) poorSignal = _buf[valueStart] & 0xFF;
-          break;
-        case 0x04: // ATTENTION
-          if (len >= 1) attention = _buf[valueStart] & 0xFF;
-          break;
-        case 0x05: // MEDITATION
-          if (len >= 1) meditation = _buf[valueStart] & 0xFF;
-          break;
-        case 0x83: // ASIC_EEG_POWER (24 bytes: 8 bandas x 3 bytes BE)
-          if (len >= 24) {
-            rawDelta = _b3(valueStart);
-            rawTheta = _b3(valueStart + 3);
-            rawLowAlpha = _b3(valueStart + 6);
-            rawHighAlpha = _b3(valueStart + 9);
-            rawLowBeta = _b3(valueStart + 12);
-            rawHighBeta = _b3(valueStart + 15);
-            rawLowGamma = _b3(valueStart + 18);
-            rawHighGamma = _b3(valueStart + 21);
-          }
-          break;
-        // 0x80 RAW_WAVE y otros códigos se ignoran.
+      if (code == 0x83 && len >= 24) {
+        // ASIC_EEG_POWER: 8 bandas x 3 bytes big-endian.
+        rawDelta = _b3(valueStart);
+        rawTheta = _b3(valueStart + 3);
+        rawLowAlpha = _b3(valueStart + 6);
+        rawHighAlpha = _b3(valueStart + 9);
+        rawLowBeta = _b3(valueStart + 12);
+        rawHighBeta = _b3(valueStart + 15);
+        rawLowGamma = _b3(valueStart + 18);
+        rawHighGamma = _b3(valueStart + 21);
       }
+      // 0x80 RAW_WAVE y otros códigos se ignoran.
 
       i = valueStart + len;
     }
