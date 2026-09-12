@@ -76,10 +76,14 @@ class SimulatedMindSource extends MindSource {
       // poorSignal casi siempre bueno, de vez en cuando malo.
       final poorSignal = _rng.nextDouble() < 0.05 ? 120 : 0;
 
+      // Parpadeo simulado: ~1 cada 3-6 s, a veces doble.
+      final blink = _rng.nextDouble() < 0.22 ? (40 + _rng.nextInt(60)) : 0;
       _eeg.applyCapture(
         signal: poorSignal,
         attention: _attention.round(),
         meditation: _meditation.round(),
+        blinkStrength: blink,
+        blinkDetected: blink > 60,
         rawDelta: _invPercent(delta),
         rawTheta: _invPercent(theta),
         rawLowAlpha: _invPercent(lalpha),

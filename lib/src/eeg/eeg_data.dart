@@ -22,6 +22,12 @@ class EegData extends ChangeNotifier {
   int attention = 0;
   int meditation = 0;
 
+  /// Parpadeo: fuerza 0-100 del ultimo blink y flag del ASIC. El juego lo
+  /// consume via `takeBlink()` para no procesar el mismo parpadeo dos veces.
+  int blinkStrength = 0;
+  bool blinkDetected = false;
+  int _blinkSeq = 0;
+
   // Valores crudos (ASIC_EEG_POWER) por banda.
   double rawDelta = 0;
   double rawTheta = 0;
@@ -63,6 +69,8 @@ class EegData extends ChangeNotifier {
     required double rawHighBeta,
     required double rawLowGamma,
     required double rawHighGamma,
+    int blinkStrength = 0,
+    bool blinkDetected = false,
   }) {
     // El original solo actualizaba si la señal era "buena" (signal > 0,
     // porque en aquel formato signal = 200 - poorSignal). Aquí tratamos
@@ -76,6 +84,7 @@ class EegData extends ChangeNotifier {
     }
     this.attention = attention;
     this.meditation = meditation;
+    this.blinkStrength = blinkStrength;
     this.rawDelta = rawDelta;
     this.rawTheta = rawTheta;
     this.rawLowAlpha = rawLowAlpha;
@@ -84,13 +93,34 @@ class EegData extends ChangeNotifier {
     this.rawHighBeta = rawHighBeta;
     this.rawLowGamma = rawLowGamma;
     this.rawHighGamma = rawHighGamma;
+    if (blinkDetected || blinkStrength > 30) {
+      this.blinkDetected = true;
+      _blinkSeq++;
+      _blinkPending = true;
+    } else {
+      this.blinkDetected = false;
+    }
     notifyListeners();
   }
+
+  /// Secuencia que incrementa solo cuando hay un parpadeo NUEVO.
+  int get blinkSeq => _blinkSeq;
+
+  /// Consume el parpadeo pendiente: true una sola vez por parpadeo.
+  bool takeBlink() {
+    if (!_blinkPending) return false;
+    _blinkPending = false;
+    return true;
+  }
+
+  bool _blinkPending = false;
 
   void reset() {
     signal = 0;
     attention = 0;
     meditation = 0;
+    blinkStrength = 0;
+    blinkDetected = false;
     rawDelta = rawTheta = rawLowAlpha = rawHighAlpha = 0;
     rawLowBeta = rawHighBeta = rawLowGamma = rawHighGamma = 0;
     notifyListeners();
@@ -103,6 +133,7 @@ class EegData extends ChangeNotifier {
         'Signal': signal.toDouble(),
         'Attention': attention.toDouble(),
         'Meditation': meditation.toDouble(),
+        'Blink': blinkStrength.toDouble(),
         'Delta': delta,
         'Theta': theta,
         'Low Alpha': lalpha,

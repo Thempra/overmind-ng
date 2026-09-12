@@ -337,6 +337,8 @@ class NeuroSkyBle extends MindSource {
         rawHighBeta: c.rawHighBeta.toDouble(),
         rawLowGamma: c.rawLowGamma.toDouble(),
         rawHighGamma: c.rawHighGamma.toDouble(),
+        blinkStrength: c.blinkStrength,
+        blinkDetected: c.blinkDetected,
       );
       _dataFound = true;
       if (!_controller.isClosed) _controller.add(_eeg);

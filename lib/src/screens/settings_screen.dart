@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../i18n/l10n.dart';
-import '../game/battle_theme.dart';
 import '../ble/neurosky_ble.dart';
-import '../state/battle_theme_controller.dart';
 import '../state/eeg_store.dart';
 import '../theme.dart';
 import 'mode_selection_screen.dart';
@@ -135,107 +133,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _sectionIcon(s.language, Icons.language, OvermindColors.shield),
           const SizedBox(height: 12),
           _langToggle(l10n, s),
-
-          const Divider(height: 40, color: OvermindColors.panelBorder),
-
-          _sectionIcon(s.matchTheme, Icons.palette_outlined,
-              OvermindColors.textDim),
-          const SizedBox(height: 8),
-          // Selector de tema de partida (Evangelion / Superpoderes).
-          ..._themeList(l10n, s),
           const SizedBox(height: 24),
         ],
-      ),
-    );
-  }
-
-  List<Widget> _themeList(LocaleController l10n, AppStrings s) {
-    final selected = context.watch<BattleThemeController>().theme;
-    final lang = l10n.locale.languageCode;
-    return [
-      for (final t in BattleTheme.all)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: _themeCard(t, t.name(lang), t.id == selected.id),
-        ),
-    ];
-  }
-
-  Widget _themeCard(BattleTheme t, String name, bool active) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: () => context.read<BattleThemeController>().setTheme(t),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: OvermindColors.panel,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: active ? t.leftColor : OvermindColors.panelBorder,
-              width: active ? 2 : 1.2,
-            ),
-          ),
-          child: Row(
-            children: [
-              // Miniatura del combate: fondo + los dos avatares.
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: SizedBox(
-                  width: 104,
-                  height: 56,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset('assets/images/${t.background}',
-                          fit: BoxFit.cover),
-                      Positioned(
-                        left: 4,
-                        top: 14,
-                        child: ClipOval(
-                          child: SizedBox(
-                            width: 34,
-                            height: 34,
-                            child: Image.asset(
-                                'assets/images/${t.leftImage}',
-                                fit: BoxFit.cover),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 4,
-                        top: 14,
-                        child: ClipOval(
-                          child: SizedBox(
-                            width: 34,
-                            height: 34,
-                            child: Image.asset(
-                                'assets/images/${t.rightImage}',
-                                fit: BoxFit.cover),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: OvermindColors.text,
-                  ),
-                ),
-              ),
-              if (active) Icon(Icons.check_circle, color: t.leftColor),
-            ],
-          ),
-        ),
       ),
     );
   }

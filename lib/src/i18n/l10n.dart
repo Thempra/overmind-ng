@@ -9,10 +9,10 @@ class AppStrings {
     required this.settings,
     required this.bluetooth,
     required this.language,
-    required this.matchTheme,
     required this.comingSoon,
     required this.attentionMeditation,
     required this.waveLevels,
+    required this.selectGame,
     required this.onePlayer,
     required this.twoPlayers,
     required this.demoMode,
@@ -49,10 +49,10 @@ class AppStrings {
   final String settings;
   final String bluetooth;
   final String language;
-  final String matchTheme;
   final String comingSoon;
   final String attentionMeditation;
   final String waveLevels;
+  final String selectGame;
   final String onePlayer;
   final String twoPlayers;
   final String demoMode;
@@ -89,10 +89,10 @@ class AppStrings {
     settings: 'Ajustes',
     bluetooth: 'Bluetooth',
     language: 'Idioma',
-    matchTheme: 'Tema de la partida',
     comingSoon: 'Próximamente',
     attentionMeditation: 'Atención / Meditación',
     waveLevels: 'Niveles de onda',
+    selectGame: 'Elige un juego',
     onePlayer: '1 Jugador',
     twoPlayers: '2 Jugadores',
     demoMode: 'Modo demo',
@@ -132,10 +132,10 @@ class AppStrings {
     settings: 'Settings',
     bluetooth: 'Bluetooth',
     language: 'Language',
-    matchTheme: 'Match theme',
     comingSoon: 'Coming soon',
     attentionMeditation: 'Attention / Meditation',
     waveLevels: 'Wave levels',
+    selectGame: 'Select a game',
     onePlayer: '1 Player',
     twoPlayers: '2 Players',
     demoMode: 'Demo mode',

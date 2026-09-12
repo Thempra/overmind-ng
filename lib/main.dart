@@ -7,6 +7,7 @@ import 'src/screens/home_screen.dart';
 import 'src/state/battle_theme_controller.dart';
 import 'src/state/eeg_store.dart';
 import 'src/state/mode_controller.dart';
+import 'src/state/progress_controller.dart';
 import 'src/theme.dart';
 
 Future<void> main() async {
@@ -26,6 +27,9 @@ Future<void> main() async {
   final themeController = BattleThemeController();
   themeController.load();
 
+  final progress = ProgressController();
+  progress.load();
+
   runApp(
     MultiProvider(
       providers: [
@@ -33,6 +37,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ModeController()),
         ChangeNotifierProvider(create: (_) => LocaleController()),
         ChangeNotifierProvider.value(value: themeController),
+        ChangeNotifierProvider.value(value: progress),
       ],
       child: const OvermindApp(),
     ),

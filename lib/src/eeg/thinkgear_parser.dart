@@ -15,6 +15,8 @@ class MindWaveCapture {
     this.rawHighBeta = 0,
     this.rawLowGamma = 0,
     this.rawHighGamma = 0,
+    this.blinkStrength = 0,
+    this.blinkDetected = false,
   });
 
   final int poorSignal;
@@ -28,6 +30,12 @@ class MindWaveCapture {
   final int rawHighBeta;
   final int rawLowGamma;
   final int rawHighGamma;
+
+  /// Fuerza del parpadeo detectado por el ASIC (0-100). 0 si no hay.
+  final int blinkStrength;
+
+  /// Código explícito EEG_BLINK_DETECTED (0xD7) en este paquete.
+  final bool blinkDetected;
 }
 
 /// Parser de máquina de estados del protocolo **ThinkGear** (NeuroSky).
@@ -44,6 +52,8 @@ class MindWaveCapture {
 ///  0x05 MEDITATION  (1B, sin byte de longitud)
 ///  0x80 RAW_WAVE    [0x80][0x02][2B le]  — se ignora
 ///  0x83 ASIC_EEG_POWER [0x83][0x18][24B, 8 bandas big-endian]
+///  0xD5 EEG_BLINK_STRENGTH [0xD5][0x01][1B, 0-100]
+///  0xD7 EEG_BLINK_DETECTED [0xD7][0x01][1B, 1 = parpadeo en este segundo]
 /// El checksum es el complemento a UNO de la suma del payload.
 class ThinkGearParser {
   final Uint8List _buf;
@@ -102,6 +112,8 @@ class ThinkGearParser {
     var rawLowAlpha = 0, rawHighAlpha = 0;
     var rawLowBeta = 0, rawHighBeta = 0;
     var rawLowGamma = 0, rawHighGamma = 0;
+    var blinkStrength = 0;
+    var blinkDetected = false;
 
     // Formato REAL TGAM: los códigos de 1 byte (0x02 POOR_SIGNAL, 0x04
     // ATTENTION, 0x05 MEDITATION) van como [código][valor] SIN byte de
@@ -139,6 +151,12 @@ class ThinkGearParser {
         rawHighBeta = _b3(valueStart + 15);
         rawLowGamma = _b3(valueStart + 18);
         rawHighGamma = _b3(valueStart + 21);
+      } else if (code == 0xD5 && len >= 1) {
+        // EEG_BLINK_STRENGTH: fuerza del parpadeo (0-100).
+        blinkStrength = _buf[valueStart] & 0xFF;
+      } else if (code == 0xD7 && len >= 1) {
+        // EEG_BLINK_DETECTED: 1 = parpadeo en este segundo.
+        blinkDetected = (_buf[valueStart] & 0xFF) > 0;
       }
       // 0x80 RAW_WAVE y otros códigos se ignoran.
 
@@ -157,6 +175,8 @@ class ThinkGearParser {
       rawHighBeta: rawHighBeta,
       rawLowGamma: rawLowGamma,
       rawHighGamma: rawHighGamma,
+      blinkStrength: blinkStrength,
+      blinkDetected: blinkDetected,
     );
   }
 
