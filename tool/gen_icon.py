@@ -2,7 +2,7 @@
 """Genera icono de app 'Overmind' en clave del juego (duelo EEG):
 onda cerebral + barra de poder EVA(cian) vs SACHIEL(rojo) sobre fondo oscuro.
 Base 512x512 RGBA opaco, esquinas redondeadas suaves."""
-import math, struct, zlib
+import math, os, struct, zlib
 
 S = 512
 
@@ -132,5 +132,7 @@ def chunk(typ,data):
     c+=struct.pack('>I',zlib.crc32(typ+data)&0xffffffff)
     return c
 png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',S,S,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(rows,9))+chunk(b'IEND',b'')
-open('/tmp/icon_512.png','wb').write(png)
-print('OK /tmp/icon_512.png 512x512', len(png),'bytes')
+_out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon_512.png")
+with open(_out_path, "wb") as _f:
+    _f.write(png)
+print("OK", _out_path, "512x512", len(png), "bytes")

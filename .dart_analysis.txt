@@ -1,0 +1,79 @@
+ERROR|COMPILE_TIME_ERROR|UNDEFINED_FUNCTION|/home/hermes/overmind_flutter/lib/src/theme.dart|42|16|13|The function 'CardThemeData' isn't defined.
+WARNING|STATIC_WARNING|UNUSED_FIELD|/home/hermes/overmind_flutter/lib/src/game/games/falcon_game.dart|26|7|5|The value of the field '_hits' isn't used.
+WARNING|STATIC_WARNING|UNUSED_FIELD|/home/hermes/overmind_flutter/lib/src/game/games/falcon_game.dart|26|18|6|The value of the field '_cores' isn't used.
+WARNING|STATIC_WARNING|UNUSED_FIELD|/home/hermes/overmind_flutter/lib/src/game/games/falcon_game.dart|26|30|7|The value of the field '_misses' isn't used.
+WARNING|STATIC_WARNING|UNUSED_LOCAL_VARIABLE|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|19|11|5|The value of the local variable 'store' isn't used.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|3|8|9|Unused import: 'dart:ui'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|7|8|31|Unused import: 'package:flame/components.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|8|8|25|Unused import: 'package:flame/game.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|9|8|36|Unused import: 'package:flame_test/flame_test.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|15|8|51|Unused import: 'package:overmind/src/game/games/balloon_game.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|16|8|50|Unused import: 'package:overmind/src/game/games/falcon_game.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|17|8|50|Unused import: 'package:overmind/src/game/games/seesaw_game.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|24|8|41|Unused import: 'package:vector_math/vector_math_64.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|28|8|30|Unused import: 'game_logic_test_helpers.dart'.
+WARNING|STATIC_WARNING|OVERRIDE_ON_NON_OVERRIDING_MEMBER|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|44|29|11|The method doesn't override an inherited method.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/game_logic_test.dart|6|8|40|Unused import: 'package:overmind/src/eeg/eeg_data.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/game_logic_test.dart|11|8|49|Unused import: 'package:overmind/src/game/signal_processor.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/mind_game_session_test.dart|4|8|17|Unused import: 'fake_audio.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/mind_game_session_test.dart|6|8|51|Unused import: 'package:overmind/src/game/games/balloon_game.dart'.
+WARNING|STATIC_WARNING|UNUSED_IMPORT|/home/hermes/overmind_flutter/test/mind_game_session_test.dart|8|8|49|Unused import: 'package:overmind/src/game/signal_processor.dart'.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/main_demo.dart|19|14|159|Use 'const' with the constructor to improve performance.
+INFO|LINT|AVOID_RENAMING_METHOD_PARAMETERS|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|121|29|8|The parameter name 'gameSize' doesn't match the name 'size' in the overridden method.
+INFO|LINT|CURLY_BRACES_IN_FLOW_CONTROL_STRUCTURES|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|251|27|12|Statements in an if should be enclosed in a block.
+INFO|LINT|CURLY_BRACES_IN_FLOW_CONTROL_STRUCTURES|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|252|32|12|Statements in an if should be enclosed in a block.
+INFO|LINT|PREFER_INITIALIZING_FORMALS|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|327|9|13|Use an initializing formal to assign a parameter to a field.
+INFO|LINT|ANNOTATE_OVERRIDES|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|357|15|6|The member 'center' overrides an inherited member but isn't annotated with '@override'.
+INFO|LINT|CURLY_BRACES_IN_FLOW_CONTROL_STRUCTURES|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|632|20|12|Statements in an if should be enclosed in a block.
+INFO|LINT|CURLY_BRACES_IN_FLOW_CONTROL_STRUCTURES|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|632|38|12|Statements in an if should be enclosed in a block.
+INFO|LINT|CURLY_BRACES_IN_FLOW_CONTROL_STRUCTURES|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|634|22|13|Statements in an if should be enclosed in a block.
+INFO|LINT|CURLY_BRACES_IN_FLOW_CONTROL_STRUCTURES|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|634|41|13|Statements in an if should be enclosed in a block.
+INFO|LINT|UNNECESSARY_STRING_INTERPOLATIONS|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|713|22|26|Unnecessary use of string interpolation.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|777|26|17|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|781|17|17|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|791|9|17|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/game/battle_game.dart|798|11|17|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/game/mental_games.dart|74|13|17|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/game/mental_games.dart|90|13|17|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/game/mental_games.dart|106|13|17|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/game_screen.dart|83|18|29|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|63|9|847|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|64|18|809|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_LITERALS_TO_CREATE_IMMUTABLES|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|66|23|708|Use 'const' literals as arguments to constructors of '@immutable' classes.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|67|15|677|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|68|17|288|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_LITERALS_TO_CREATE_IMMUTABLES|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|69|29|231|Use 'const' literals as arguments to constructors of '@immutable' classes.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|71|21|138|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/home_screen.dart|73|30|40|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/levels_mind_screen.dart|78|33|115|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/levels_mind_screen.dart|79|35|46|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/levels_mind_screen.dart|88|32|53|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/levels_mind_screen.dart|88|55|29|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/levels_mind_screen.dart|89|34|53|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/levels_mind_screen.dart|89|57|29|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|161|21|39|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|333|32|305|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_LITERALS_TO_CREATE_IMMUTABLES|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|338|36|44|Use 'const' literals as arguments to constructors of '@immutable' classes.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|338|37|42|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_LITERALS_TO_CREATE_IMMUTABLES|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|398|19|50|Use 'const' literals as arguments to constructors of '@immutable' classes.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|416|25|13|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_LITERALS_TO_CREATE_IMMUTABLES|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|452|19|50|Use 'const' literals as arguments to constructors of '@immutable' classes.
+INFO|LINT|PREFER_CONST_LITERALS_TO_CREATE_IMMUTABLES|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|500|19|50|Use 'const' literals as arguments to constructors of '@immutable' classes.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|524|29|169|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_LITERALS_TO_CREATE_IMMUTABLES|/home/hermes/overmind_flutter/lib/src/screens/modes/player_mode_view.dart|524|52|145|Use 'const' literals as arguments to constructors of '@immutable' classes.
+INFO|HINT|UNUSED_ELEMENT|/home/hermes/overmind_flutter/lib/src/screens/settings_screen.dart|398|10|11|The declaration '_comingSoon' isn't referenced.
+INFO|HINT|UNNECESSARY_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|1|8|12|The import of 'dart:async' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_test/flutter_test.dart'.
+INFO|LINT|DEPEND_ON_REFERENCED_PACKAGES|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|6|8|86|The imported package 'device_info_plus_platform_interface' isn't a dependency of the importing package.
+INFO|HINT|UNNECESSARY_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|11|8|31|The import of 'package:flutter/material.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart'.
+INFO|LINT|DEPEND_ON_REFERENCED_PACKAGES|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|22|8|80|The imported package 'path_provider_platform_interface' isn't a dependency of the importing package.
+INFO|LINT|DEPEND_ON_REFERENCED_PACKAGES|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|23|8|90|The imported package 'permission_handler_platform_interface' isn't a dependency of the importing package.
+INFO|LINT|DEPEND_ON_REFERENCED_PACKAGES|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|24|8|41|The imported package 'vector_math' isn't a dependency of the importing package.
+INFO|HINT|UNNECESSARY_IMPORT|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|27|8|33|The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart'.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/test/capture_and_store_test.dart|184|19|28|Use 'const' with the constructor to improve performance.
+INFO|HINT|UNNECESSARY_IMPORT|/home/hermes/overmind_flutter/test/game_render_test.dart|12|8|41|The import of 'package:vector_math/vector_math_64.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flame/components.dart'.
+INFO|LINT|DEPEND_ON_REFERENCED_PACKAGES|/home/hermes/overmind_flutter/test/game_render_test.dart|12|8|41|The imported package 'vector_math' isn't a dependency of the importing package.
+INFO|HINT|UNNECESSARY_IMPORT|/home/hermes/overmind_flutter/test/spp_client_test.dart|1|8|12|The import of 'dart:async' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_test/flutter_test.dart'.
+INFO|HINT|UNNECESSARY_IMPORT|/home/hermes/overmind_flutter/test/spp_client_test.dart|2|8|17|The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/services.dart'.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/test/spp_client_test.dart|138|9|31|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/test/spp_client_test.dart|139|9|31|Use 'const' with the constructor to improve performance.
+INFO|LINT|PREFER_CONST_CONSTRUCTORS|/home/hermes/overmind_flutter/test/spp_client_test.dart|141|20|45|Use 'const' with the constructor to improve performance.

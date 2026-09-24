@@ -44,3 +44,4 @@ app.*.map.json
 graphify-out/
 
 android/build/
+tool/icon_512.png

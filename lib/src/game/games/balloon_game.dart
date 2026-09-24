@@ -38,10 +38,12 @@ class BalloonLogic extends GameLogic {
 
   late Vector2 _size;
   late _Balloon _balloon;
+  FlameGame? _game;
 
   @override
   Future<void> build(FlameGame game, Vector2 size) async {
     _size = size;
+    _game = game;
     _adaptive = AdaptiveThreshold(math.max(30.0, cal.medMean + 8));
     _smooth = eeg?.meditation.toDouble() ?? cal.medMean;
 
@@ -76,6 +78,8 @@ class BalloonLogic extends GameLogic {
       _pops++;
       _inflate = 0.15;
       final fx = _BurstEffect()..priority = 30;
+      // Añadirlo al árbol ANTES de spawnAt: este usa `game` (HasGameReference).
+      _game?.add(fx);
       fx.spawnAt(Vector2(_size.x / 2, _size.y * 0.55), _rng);
       _pop?.seek(Duration.zero);
       _pop?.resume();
@@ -185,7 +189,6 @@ class _BurstEffect extends PositionComponent
           const Color(0xFFFF6B9D).withOpacity(0.5 + rng.nextDouble() * 0.5),
           4 + rng.nextDouble() * 6));
     }
-    game.add(this);
   }
 
   @override
