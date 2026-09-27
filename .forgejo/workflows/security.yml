@@ -43,10 +43,12 @@ jobs:
           python3 -m pip install --no-cache-dir --quiet bandit semgrep checkov 2>/dev/null || \
             python3 -m pip install --break-system-packages --no-cache-dir --quiet bandit semgrep checkov
           # Java + sonar-scanner CLI (análisis SonarQube)
-          sudo apt-get install -y -qq openjdk-17-jre-headless unzip >/dev/null 2>&1 || true
+          sudo apt-get install -y -qq openjdk-17-jre-headless unzip >/dev/null
           if [ ! -x /usr/local/bin/sonar-scanner ]; then
-            curl -fsSL -o /tmp/sonar.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4893_linux.zip
-            sudo unzip -q -o /tmp/sonar.zip -d /opt && sudo ln -sf /opt/sonar-scanner-6.2.1.4893-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
+            # binaries.sonarsource.com da 403 sin UA; Maven Central es fiable.
+            curl -fsSL -o /tmp/sonar.zip https://repo1.maven.org/maven2/org/sonarsource/scanner/cli/sonar-scanner-cli/8.1.0.6389/sonar-scanner-cli-8.1.0.6389.zip
+            sudo unzip -q -o /tmp/sonar.zip -d /opt
+            sudo ln -sf /opt/sonar-scanner-8.1.0.6389/bin/sonar-scanner /usr/local/bin/sonar-scanner
           fi
           java -version 2>&1 | head -1; sonar-scanner --version | tail -1
           gitleaks version; trivy --version | head -1; bandit --version 2>&1 | head -1; semgrep --version
