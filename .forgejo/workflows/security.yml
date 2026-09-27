@@ -21,7 +21,7 @@ jobs:
     container:
       image: cimg/base:current
     env:
-      PROJECT_KEY: ${{ vars.PRODUCT_NAME || github.repository }}
+      PROJECT_KEY: overmind_flutter
       COMMIT_SHA: ${{ github.sha }}
       GH_TOK: ${{ github.token }}
     steps:
