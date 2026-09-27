@@ -1,8 +1,9 @@
 name: security
-# Escáneres de seguridad → DefectDojo (engagement "CI", producto = PROJECT_KEY).
+# Escáneres de seguridad → SonarQube + DefectDojo; deploy Coolify si todo va OK.
 # Job único: el runner es compartido y los binarios de escáner son estáticos.
 # Sin actions/checkout ni artifacts (necesitan Node) — checkout con git + FORGEJO_TOKEN.
-# Secrets de org requeridos: DOJO_URL, DOJO_API_TOKEN, FORGEJO_TOKEN (read-only).
+# Secrets de org requeridos: DOJO_URL, DOJO_API_TOKEN, SONAR_TOKEN.
+# Opcionales p/ deploy: secret COOLIFY_API_TOKEN + vars COOLIFY_URL, COOLIFY_DEPLOY_UUIDS.
 on:
   push:
     branches: [main, master, develop, dev]
@@ -21,7 +22,7 @@ jobs:
     container:
       image: cimg/base:current
     env:
-      PROJECT_KEY: overmind_flutter
+      PROJECT_KEY: ${{ vars.PRODUCT_NAME || github.repository }}
       REPO_PATH: ${{ github.repository }}
       COMMIT_SHA: ${{ github.sha }}
       GH_TOK: ${{ github.token }}
@@ -41,6 +42,13 @@ jobs:
           sudo tar -xzf /tmp/tr.tgz -C /usr/local/bin trivy
           python3 -m pip install --no-cache-dir --quiet bandit semgrep checkov 2>/dev/null || \
             python3 -m pip install --break-system-packages --no-cache-dir --quiet bandit semgrep checkov
+          # Java + sonar-scanner CLI (análisis SonarQube)
+          sudo apt-get install -y -qq openjdk-17-jre-headless unzip >/dev/null 2>&1 || true
+          if [ ! -x /usr/local/bin/sonar-scanner ]; then
+            curl -fsSL -o /tmp/sonar.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4893_linux.zip
+            sudo unzip -q -o /tmp/sonar.zip -d /opt && sudo ln -sf /opt/sonar-scanner-6.2.1.4893-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
+          fi
+          java -version 2>&1 | head -1; sonar-scanner --version | tail -1
           gitleaks version; trivy --version | head -1; bandit --version 2>&1 | head -1; semgrep --version
       - name: gitleaks (secretos)
         run: mkdir -p scans && gitleaks detect --source repo --no-git -f json -r scans/gitleaks.json || true
@@ -63,3 +71,39 @@ jobs:
           DOJO_API_TOKEN: ${{ secrets.DOJO_API_TOKEN }}
           CI_UPLOAD_DIR: scans
         run: python3 repo/.security/dojo_upload.py
+      - name: SonarQube (SAST + calidad)
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          set -e
+          if [ ! -f repo/sonar-project.properties ]; then
+            echo "Sin sonar-project.properties — se omite (no analizado en Sonar)."; exit 0
+          fi
+          cd repo
+          sonar-scanner -Dsonar.host.url=https://sast.thempra.net \
+            -Dsonar.login="$SONAR_TOKEN" -Dsonar.qualitygate.wait=true -Dsonar.scm.disabled=true
+      - name: Deploy Coolify
+        # Solo si TODO lo anterior fue OK (escáneres, subida a Dojo y Sonar) y
+        # el repo tiene app desplegada (vars COOLIFY_DEPLOY_UUIDS + secret token).
+        if: success() && github.event_name == 'push'
+        env:
+          COOLIFY_URL: ${{ vars.COOLIFY_URL }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          DEPLOY_UUIDS: ${{ vars.COOLIFY_DEPLOY_UUIDS }}
+        run: |
+          set -e
+          if [ -z "$DEPLOY_UUIDS" ] || [ -z "$COOLIFY_TOKEN" ]; then
+            echo "Sin COOLIFY_DEPLOY_UUIDS/COOLIFY_API_TOKEN — sin deploy."; exit 0
+          fi
+          COOLIFY_URL=${COOLIFY_URL:-https://orchestrator.thempra.net}
+          echo "192.168.50.5 orchestrator.thempra.net" | sudo tee -a /etc/hosts >/dev/null || true
+          for uuid in $DEPLOY_UUIDS; do
+            echo "→ deploy $uuid"
+            code=$(curl -sS -m 60 -o /tmp/dep.json -w '%{http_code}' \
+              -X POST "$COOLIFY_URL/api/v1/deployments/$uuid?pr=false&force=false" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN")
+            cat /tmp/dep.json; echo
+            [ "$code" = "200" ] || { echo "deploy $uuid falló (HTTP $code)"; exit 1; }
+            sleep 5
+          done
