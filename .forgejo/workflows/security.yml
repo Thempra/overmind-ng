@@ -30,8 +30,13 @@ jobs:
       - name: Checkout
         run: |
           echo "192.168.50.5 code.thempra.net dojo.thempra.net sast.thempra.net" | sudo tee -a /etc/hosts >/dev/null
-          git clone --depth 5 -b "${{ github.ref_name }}" "https://x-access-token:${GH_TOK}@code.thempra.net/${REPO_PATH}.git" repo
-          ls repo | head -5
+          REPO_URL="https://x-access-token:${GH_TOK}@code.thempra.net/${REPO_PATH}.git"
+          # Clavar el SHA disparado: evita inconsistencias entre ramas cuando el
+          # workflow se rollout en una rama y el push va por otra.
+          git init -q repo && cd repo && git remote add origin "$REPO_URL"
+          git fetch -q --depth 5 origin "$COMMIT_SHA" || git fetch -q --depth 5 origin "${{ github.ref_name }}"
+          git -c advice.detachedHead=false checkout -q FETCH_HEAD
+          ls | head -5
       - name: Tests + coverage (pre-Sonar)
         # Repos con marcador .security/pytest-cov: ejecutamos pytest --cov para
         # que el coverage.xml exista ANTES del análisis (sin eso Sonar mide 0%).
@@ -42,9 +47,10 @@ jobs:
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq python3-pip >/dev/null
           sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet pytest pytest-cov 2>/dev/null || \
             python3 -m pip install --break-system-packages --no-cache-dir --quiet pytest pytest-cov
-          if [ -f repo/requirements.txt ]; then
-            sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet -r repo/requirements.txt || \
-              python3 -m pip install --break-system-packages --no-cache-dir --quiet -r repo/requirements.txt || true
+          if [ -f repo/.security/requirements-ci.txt ]; then REQ=repo/.security/requirements-ci.txt; else REQ=repo/requirements.txt; fi
+          if [ -f "$REQ" ]; then
+            sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet -r "$REQ" || \
+              python3 -m pip install --break-system-packages --no-cache-dir --quiet -r "$REQ" || true
           fi
           COVDIR=$(dirname "$(sed -n 's/^sonar.python.coverage.reportPaths=\([^,]*\).*/\1/p' repo/sonar-project.properties | head -1)")
           mkdir -p "repo/$COVDIR"
