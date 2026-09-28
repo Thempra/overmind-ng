@@ -32,6 +32,26 @@ jobs:
           echo "192.168.50.5 code.thempra.net dojo.thempra.net sast.thempra.net" | sudo tee -a /etc/hosts >/dev/null
           git clone --depth 5 -b "${{ github.ref_name }}" "https://x-access-token:${GH_TOK}@code.thempra.net/${REPO_PATH}.git" repo
           ls repo | head -5
+      - name: Tests + coverage (pre-Sonar)
+        # Repos con marcador .security/pytest-cov: ejecutamos pytest --cov para
+        # que el coverage.xml exista ANTES del análisis (sin eso Sonar mide 0%).
+        run: |
+          set -e
+          MK="repo/.security/pytest-cov"
+          [ -f "$MK" ] || { echo "sin marcador pytest-cov — se omite"; exit 0; }
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq python3-pip >/dev/null
+          sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet pytest pytest-cov 2>/dev/null || \
+            python3 -m pip install --break-system-packages --no-cache-dir --quiet pytest pytest-cov
+          if [ -f repo/requirements.txt ]; then
+            sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet -r repo/requirements.txt || \
+              python3 -m pip install --break-system-packages --no-cache-dir --quiet -r repo/requirements.txt || true
+          fi
+          COVDIR=$(dirname "$(sed -n 's/^sonar.python.coverage.reportPaths=\([^,]*\).*/\1/p' repo/sonar-project.properties | head -1)")
+          mkdir -p "repo/$COVDIR"
+          ( cd repo && PYTHONPATH="$(pwd):$PYTHONPATH" python3 -m pytest $(cat "$MK") \
+              --cov-report=xml:"$(pwd)/$COVDIR/coverage.xml" -q -p no:cacheprovider \
+              --continue-on-collection-errors -o addopts= ) || true
+          ls -la "repo/$COVDIR/" | head -5
       - name: SonarQube (SAST + calidad) — 1er análisis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
