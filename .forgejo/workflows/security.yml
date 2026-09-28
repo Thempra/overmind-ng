@@ -49,12 +49,13 @@ jobs:
             python3 -m pip install --break-system-packages --no-cache-dir --quiet pytest pytest-cov
           if [ -f repo/.security/requirements-ci.txt ]; then REQ=repo/.security/requirements-ci.txt; else REQ=repo/requirements.txt; fi
           if [ -f "$REQ" ]; then
-            sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet -r "$REQ" || \
-              python3 -m pip install --break-system-packages --no-cache-dir --quiet -r "$REQ" || true
+            sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet --ignore-installed cryptography -r "$REQ" || \
+              python3 -m pip install --break-system-packages --no-cache-dir --quiet --ignore-installed cryptography -r "$REQ" || true
           fi
           COVDIR=$(dirname "$(sed -n 's/^sonar.python.coverage.reportPaths=\([^,]*\).*/\1/p' repo/sonar-project.properties | head -1)")
           mkdir -p "repo/$COVDIR"
-          ( cd repo && PYTHONPATH="$(pwd):$PYTHONPATH" python3 -m pytest $(cat "$MK") \
+          MKARGS=$(cat "$MK")
+          ( cd repo && PYTHONPATH="$(pwd):$PYTHONPATH" python3 -m pytest $MKARGS \
               --cov-report=xml:"$(pwd)/$COVDIR/coverage.xml" -q -p no:cacheprovider \
               --continue-on-collection-errors -o addopts= ) || true
           ls -la "repo/$COVDIR/" | head -5
