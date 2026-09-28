@@ -58,6 +58,11 @@ jobs:
           sudo tar -xzf /tmp/tr.tgz -C /usr/local/bin trivy
           python3 -m pip install --no-cache-dir --quiet bandit semgrep checkov 2>/dev/null || \
             python3 -m pip install --break-system-packages --no-cache-dir --quiet bandit semgrep checkov
+          # pip sin sudo instala en ~/.local/bin, que NO está en el PATH de los
+          # steps siguientes -> instalar como root en /usr/local/bin siempre.
+          sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet bandit semgrep checkov 2>/dev/null || true
+          for b in bandit semgrep checkov; do command -v $b >/dev/null || sudo ln -sf "$HOME/.local/bin/$b" /usr/local/bin/$b 2>/dev/null || true; done
+          export PATH="$HOME/.local/bin:$PATH"
           gitleaks version; trivy --version | head -1; bandit --version 2>&1 | head -1; semgrep --version
       - name: gitleaks (secretos)
         run: mkdir -p scans && gitleaks detect --source repo --no-git -f json -r scans/gitleaks.json || true
