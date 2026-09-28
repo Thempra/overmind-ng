@@ -19,6 +19,7 @@ concurrency:
 jobs:
   scan:
     runs-on: docker
+    timeout-minutes: 20
     container:
       image: cimg/base:current
     env:
