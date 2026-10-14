@@ -88,3 +88,8 @@ assets/
   images/     original sprites and backgrounds
   audio/      pew_pew_lei.wav
 ```
+
+## Docs
+
+- [docs/foundation/](docs/foundation/README.md) — PRD, TRD, flow, design brief, backend schema, plan de implementación (single source of truth).
+- [docs/DISENO_JUEGOS.md](docs/DISENO_JUEGOS.md) — diseño de juego de la plataforma mental.
