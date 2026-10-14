@@ -1,5 +1,8 @@
 # Overmind NG
 
+> 🌐 **Try it → [thempra.github.io/overmind-ng](https://thempra.github.io/overmind-ng/)**
+> (EN / ES)
+
 Next-generation version of the Android project **overmind-android** (NeuroSky/MindWave EEG),
 rewritten in **Flutter**.
 Runs on **Android**, **iOS** and **Linux desktop**, with a **BLE** stack for the EEG and
