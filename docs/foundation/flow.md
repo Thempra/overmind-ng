@@ -53,7 +53,7 @@ main → HomeScreen (siempre landscape)
 - initState: landscape + `immersiveSticky`; crea `BattleGame` con el tema activo.
 - **VS banner** 2.2 s al inicio; luego combate.
 - Reglas: atención → cadencia/daño de bolas de fuego; meditación → escudo
-  regenerador; HP 0 → fin. (Daño/TTK: TRD §5 + DISENO_JUEGOS §3.A.)
+  regenerador; HP 0 → fin. (Daño/TTK: DISENO_JUEGOS §3.A.)
 - Overlay fin: ganador grande + **[Revancha]** (`game.restart()`, misma
   partida reset) + **[Salir]** (pop a Home).
 - dispose: restaura orientación y UI system.
@@ -72,7 +72,7 @@ main → HomeScreen (siempre landscape)
 ### ResearcherModeView
 - **Card "Atención/Meditación"**: `_anySlot()` (primero conectado real, si no
   añade demo) → push `DataAnalyzerScreen(slot)`: line-chart ventana 30 s,
-  muestreo 1 Hz, leyenda Atención(verde)/Meditación(azul).
+  muestreo 1 Hz, colores de serie según design-brief §1.
 - **Card "Niveles de Mente"**: push `LevelsMindScreen(slot)`: barra poorSignal
   (0=buena, /200) + bar-chart de 11 valores (Signal, Att, Med + 8 bandas).
 - Ambos: **[←]** AppBar pop.
@@ -90,13 +90,11 @@ main → HomeScreen (siempre landscape)
   (la opción activa se marca con check y borde de acento).
 - **[ES|EN]**: `LocaleController.locale` — re-textualiza toda la app al instante.
 
-## 4. Sesión de juego EEG (resumen de estado)
+## 4. Sesión de juego EEG
 
-```
-[EegStore slots] --notificaciones--> EegData (mutante) 
-   --> SignalProcessor (EMA/hist/blink) --> GameLogic.update(dt,t)
-Calibrador(5s) --> umbrales iniciales --> AdaptiveThreshold (DDA 10s)
-```
+Pipeline de datos: backend-schema §6.2. Primitivas y knobs (EMA, calibrador,
+DDA, histeresis): TRD §5. Este doc solo fija cuándo se muestran las fases al
+usuario (calibración → juego → resultados, §3).
 
 ## 5. Errores de usuario y recuperaciones
 

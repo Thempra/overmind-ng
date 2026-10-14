@@ -43,7 +43,8 @@ sostenida) con capa de progreso (récords, puntos mentales, rachas) y un
   - **Duelo/seesaw** (calma = med−atención, 2 cabezales, 90 s, 8+)
   - **Halcón** (parpadeo para derribar cometas, 90 s, 1P, 10+)
 - F10. Asignación automática de slots: EEGs reales primero, rellena con demo si faltan.
-- F11. **Capa meta persistente**: mejor puntuación por juego, puntos mentales totales (Σ), racha diaria con **congelador** (1 día perdonado; +1 congelador por cada 7 días).
+- F11. **Capa meta persistente**: mejor puntuación por juego, puntos mentales
+  totales (Σ), racha diaria con **congelador** (semántica y reglas: backend-schema §3).
 
 ### 3.3 Modo Investigador
 - F12. **Analizador Atención/Meditación**: gráfica de línea en vivo (ventana 30 s).

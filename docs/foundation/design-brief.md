@@ -79,8 +79,8 @@ atención `#00C800`, meditación `#0000C8`, ondas `#9900CC`.
 
 - Transiciones: fades cortos (180-250 ms); nada de parallax.
 - SFX solo batalla: `pew_pew_lei.wav` disparo + golpe; volumen moderado.
-- Feedback de recompensa <1 s tras criterio de señal (regla de diseño, no
-   negociable — DISENO_JUEGOS §2).
+- Feedback de recompensa tras criterio de señal: <1 s, no negociable
+  (criterio de éxito: PRD §6; justificación: DISENO_JUEGOS §2).
 
 ## 6. Referencias visuales del repo
 

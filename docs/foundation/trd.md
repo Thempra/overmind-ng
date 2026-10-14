@@ -73,8 +73,7 @@ lib/
 
 Reglas:
 - Los juegos **nunca** leen `EegData` crudo para premiar: todo pasa por
-  `SignalProcessor` (EMA α=0.3, histéresis on/off, criterio sostenido, blink
-  con debounce 900 ms y consumo único `takeBlink`).
+  `SignalProcessor` (knobs en §5).
 - Todo minijuego mental usa el scaffold `MindGameSession`
   (calibrar→jugar→resultados) e implementa `GameLogic`
   (`build/update/meterValue/score/dispose`).
