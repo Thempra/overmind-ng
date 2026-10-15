@@ -1,321 +1,265 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" class="arcade">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OVERMIND — Your focus is the weapon. 1v1 mind battles.</title>
-<meta name="description" content="OVERMIND: real 1v1 battles controlled by YOUR BRAIN. Focus to fire, calm to shield. Any ~$20 EEG headset becomes your controller. Free, offline, no accounts. GLHF.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+<title>OVERMIND — Two mindsets. One headset.</title>
+<meta name="description" content="OVERMIND: an EEG headset becomes a game controller (1v1 mind battles, mental arcade) and a portable neurology bench (live attention/meditation, 8 EEG bands). Free, open source, 100% offline.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700;1,900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#05070C; --bg2:#0B1120; --panel:#121A2B; --border:#24304D;
-  --cyan:#35B6FF; --red:#FF4B4B; --gold:#FFE34D; --lime:#7CFC00;
-  --text:#E8EEF6; --dim:#8A97B2;
+  --void:#04060b; --panel:#0a0f1a; --panel2:#0e1523; --line:rgba(120,150,200,.16);
+  --txt:#dfe8f5; --mut:#8798b5;
+  --cyan:#35B6FF; --red:#FF5D55; --amber:#FFC53D; --green:#66E39E; --lilac:#A78BFA;
+  --disp:'Chakra Petch',sans-serif; --body:'IBM Plex Sans',sans-serif; --mono:'IBM Plex Mono',monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'Chakra Petch',system-ui,sans-serif;overflow-x:hidden;line-height:1.55}
-a{color:inherit;text-decoration:none}
-code,pre,.mono{font-family:'JetBrains Mono',monospace}
-html[lang="en"] .es{display:none}
-html[lang="es"] .en{display:none}
-::selection{background:var(--cyan);color:#04121f}
-/* ---- diagonal grid + scanlines ---- */
-body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
-  background:repeating-linear-gradient(-55deg,rgba(53,182,255,.05) 0 1px,transparent 1px 90px),
-             repeating-linear-gradient(55deg,rgba(255,75,75,.04) 0 1px,transparent 1px 110px)}
-.scanlines{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.5;
-  background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 4px)}
-.glowline{position:fixed;top:0;left:0;right:0;height:2px;z-index:61;background:linear-gradient(90deg,var(--cyan),var(--red));opacity:.8}
-/* ---- nav ---- */
-nav{position:fixed;top:2px;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
-  padding:12px 4vw;background:rgba(5,7,12,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
-.logo{font-weight:700;letter-spacing:.18em;font-size:17px;font-style:italic;display:flex;gap:3px}
-.logo .o{color:var(--text)}.logo .m{color:var(--cyan);text-shadow:0 0 16px var(--cyan)}
-.navlinks{display:flex;gap:4px;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
-.navlinks a{padding:8px 14px;color:var(--dim);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:.15s}
-.navlinks a:hover{color:#04121f;background:var(--cyan)}
-.langbtn{font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 16px;letter-spacing:.1em;
-  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer;transition:.15s}
-.langbtn:hover{color:var(--gold);border-color:var(--gold)}
-/* ---- buttons: angled clip ---- */
-.btn{display:inline-flex;align-items:center;gap:10px;padding:15px 32px;font-weight:700;font-size:15px;letter-spacing:.1em;
-  text-transform:uppercase;font-style:italic;clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);transition:.15s;cursor:pointer;border:none}
-.btn.fires{background:var(--cyan);color:#04121f;box-shadow:0 0 34px rgba(53,182,255,.45)}
-.btn.fires:hover{background:#5cc8ff;box-shadow:0 0 50px rgba(53,182,255,.65);transform:translateY(-2px)}
-.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--red)}
-.btn.ghost:hover{background:var(--red);color:#1a0000;box-shadow:0 0 34px rgba(255,75,75,.5)}
-/* ---- hero ---- */
-.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:130px 4vw 60px;position:relative;max-width:1280px;margin:0 auto}
-.press{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--lime);letter-spacing:.3em;margin-bottom:18px}
-.press::before{content:"● ";animation:pulse 1.4s infinite}
-@keyframes pulse{50%{opacity:.25}}
-h1{font-size:clamp(52px,10vw,128px);line-height:.92;font-weight:700;font-style:italic;letter-spacing:-.01em;text-transform:uppercase}
-h1 .l1{display:block;color:var(--text)}
-h1 .l2{display:block;color:var(--cyan);text-shadow:0 0 30px rgba(53,182,255,.5),4px 4px 0 rgba(255,75,75,.35)}
-h1 .l3{display:block;color:var(--red);text-shadow:0 0 30px rgba(255,75,75,.45)}
-.hero p.lead{margin:26px 0 36px;font-size:clamp(16px,1.9vw,20px);color:var(--dim);max-width:660px;font-weight:500}
-.hero p.lead b{color:var(--gold)}
-.ctas{display:flex;gap:16px;flex-wrap:wrap}
-.ticker{margin-top:60px;border-block:1px solid var(--border);overflow:hidden;white-space:nowrap;padding:12px 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
-.ticker .in{display:inline-block;animation:tick 24s linear infinite;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--dim);letter-spacing:.12em}
-.ticker .in span{margin:0 26px}
-.ticker .in em{color:var(--cyan);font-style:normal}
-.ticker .in i{color:var(--red);font-style:normal}
-@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-/* ---- VS arena ---- */
-.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(10px,3vw,40px);align-items:center;max-width:1280px;margin:0 auto;padding:90px 4vw 0}
-.fighter{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--border);padding:34px 28px;position:relative;
-  clip-path:polygon(0 0,100% 0,100% calc(100% - 26px),calc(100% - 26px) 100%,0 100%)}
-.fighter.p1{border-top:3px solid var(--cyan)}
-.fighter.p2{border-top:3px solid var(--red);clip-path:polygon(0 0,100% 0,100% 100%,26px 100%,0 calc(100% - 26px))}
-.fighter h3{font-size:22px;font-style:italic;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
-.fighter.p1 h3{color:var(--cyan)}.fighter.p2 h3{color:var(--red)}
-.fighter ul{list-style:none;font-size:14.5px;color:var(--dim)}
-.fighter li{padding:7px 0;border-bottom:1px dashed rgba(36,48,77,.7);display:flex;justify-content:space-between;gap:12px}
-.fighter li b{font-family:'JetBrains Mono',monospace;font-size:12.5px;white-space:nowrap}
-.fighter.p1 li b{color:var(--cyan)}.fighter.p2 li b{color:var(--red)}
-.vsbadge{font-size:clamp(56px,9vw,110px);font-weight:700;font-style:italic;color:var(--gold);text-shadow:0 0 40px rgba(255,227,77,.5);
-  animation:shake 3.4s infinite;line-height:1}
-@keyframes shake{0%,94%,100%{transform:translate(0)}95%{transform:translate(-4px,2px)}96%{transform:translate(4px,-2px)}97%{transform:translate(-3px,-2px)}98%{transform:translate(3px,2px)}}
-/* ---- sections ---- */
-section{padding:96px 4vw;max-width:1280px;margin:0 auto}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--lime);margin-bottom:12px}
-h2{font-size:clamp(30px,4.6vw,52px);font-weight:700;font-style:italic;text-transform:uppercase;letter-spacing:-.01em;margin-bottom:12px;line-height:1}
-h2 .hl{color:var(--cyan)}
-h2 .hr{color:var(--red)}
-.sub{color:var(--dim);max-width:680px;font-size:16.5px;margin-bottom:48px;font-weight:500}
-/* ---- mode grid (arcade select) ---- */
-.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-.mode{position:relative;border:1px solid var(--border);background:var(--bg2);overflow:hidden;transition:.18s;
-  clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px)}
-.mode:hover{border-color:var(--cyan);transform:translateY(-5px);box-shadow:0 18px 44px rgba(53,182,255,.18)}
-.mode img{width:100%;display:block;filter:saturate(.85);transition:.25s}
-.mode:hover img{filter:saturate(1.3);transform:scale(1.03)}
-.mode .body{padding:18px 20px 22px}
-.mode .slot{position:absolute;top:14px;left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;background:#05070Cd9;border:1px solid var(--border);padding:3px 9px;color:var(--dim);z-index:2}
-.mode .players{position:absolute;top:14px;right:14px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 9px;z-index:2;background:#05070Cd9;border:1px solid var(--gold);color:var(--gold)}
-.mode h3{font-size:18px;font-style:italic;text-transform:uppercase;margin-bottom:6px}
-.mode p{font-size:13.5px;color:var(--dim)}
-.mode .stat{margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:.08em}
-/* ---- loadout ---- */
-.loadout{display:grid;gap:10px}
-.item{display:grid;grid-template-columns:64px 1fr auto;gap:20px;align-items:center;background:var(--bg2);border-left:3px solid var(--cyan);
-  padding:20px 24px;transition:.15s}
-.item:hover{background:var(--panel);transform:translateX(6px)}
-.item:nth-child(even){border-left-color:var(--red)}
-.item .no{font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--dim)}
-.item h3{font-size:16.5px;text-transform:uppercase;font-style:italic}
-.item p{font-size:14px;color:var(--dim)}
-.item .chip{font-family:'JetBrains Mono',monospace;font-size:10.5px;border:1px solid var(--border);padding:5px 10px;color:var(--gold);white-space:nowrap}
-/* ---- how: keycaps ---- */
-.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-.key{background:var(--panel);border:1px solid var(--border);border-radius:10px;border-bottom-width:5px;padding:24px 20px;transition:.12s}
-.key:hover{transform:translateY(3px);border-bottom-width:2px;border-color:var(--cyan)}
-.key .cap{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:12px;background:#05070C;border:1px solid var(--border);border-bottom-width:3px;border-radius:6px;padding:5px 12px;color:var(--lime);margin-bottom:14px}
-.key h3{font-size:16px;text-transform:uppercase;font-style:italic;margin-bottom:8px}
-.key p{font-size:14px;color:var(--dim)}
-/* ---- requirements ---- */
-.hw{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
-.hw .col{background:var(--bg2);border:1px solid var(--border);padding:26px;clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%)}
-.hw .col h3{font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px}
-.hw .y h3{color:var(--lime)}.hw .n h3{color:var(--red)}
-.hw ul{list-style:none;font-size:14.5px;color:var(--dim)}
-.hw li{padding:7px 0 7px 24px;position:relative}
-.hw .y li::before{content:"▸";position:absolute;left:0;color:var(--lime)}
-.hw .n li::before{content:"✕";position:absolute;left:0;color:var(--red)}
-.hw .q li::before{content:"★";position:absolute;left:0;color:var(--gold)}
-/* ---- CTA ---- */
-.cta{text-align:center;border:1px solid var(--border);padding:80px 6vw;position:relative;overflow:hidden;
-  clip-path:polygon(26px 0,100% 0,100% calc(100% - 26px),calc(100% - 26px) 100%,0 100%,0 26px);
-  background:radial-gradient(ellipse 90% 130% at 50% -30%,rgba(53,182,255,.2),transparent 60%),
-             radial-gradient(ellipse 90% 130% at 50% 130%,rgba(255,75,75,.16),transparent 60%),var(--bg2)}
-.cta h2{margin-bottom:14px}
-.cta p{color:var(--dim);margin-bottom:36px;font-size:17px;font-weight:500}
-footer{padding:36px 4vw;text-align:center;color:var(--dim);font-size:12px;font-family:'JetBrains Mono',monospace;border-top:1px solid var(--border);letter-spacing:.08em}
-/* ---- reveal ---- */
-.reveal{opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
-.reveal.on{opacity:1;transform:none}
-@media(max-width:860px){.vs{grid-template-columns:1fr}.vsbadge{padding:6px 0}.navlinks{display:none}.item{grid-template-columns:44px 1fr}.item .chip{display:none}}
+body{background:var(--void);color:var(--txt);font-family:var(--body);overflow-x:hidden;line-height:1.6}
+body.arcade{--accent:var(--cyan);--accent2:var(--red)}
+body.lab{--accent:var(--lilac);--accent2:var(--cyan)}
+a{color:inherit}
+::selection{background:color-mix(in srgb,var(--accent) 45%,transparent)}
+.mono{font-family:var(--mono)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(18px,4vw,40px)}
+/* i18n */
+.en,.es{display:none}
+html[lang="en"] .en,html[lang="es"] .es{display:inline}
+html[lang="en"] h1 .en,html[lang="en"] h2 .en,html[lang="en"] p .en,html[lang="en"] span.blk{display:block}
+body.arcade [data-lab]{display:none!important}
+body.lab [data-arc]{display:none!important}
+/* backdrop */
+.grid{position:fixed;inset:0;z-index:-2;background:
+ radial-gradient(900px 500px at 15% -5%,rgba(53,182,255,.09),transparent 60%),
+ radial-gradient(900px 600px at 90% 110%,rgba(167,139,250,.09),transparent 60%),
+ linear-gradient(rgba(110,140,190,.05) 1px,transparent 1px),
+ linear-gradient(90deg,rgba(110,140,190,.05) 1px,transparent 1px);
+ background-size:auto,auto,44px 44px,44px 44px;transition:opacity .6s}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;opacity:.35;
+ background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px)}
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:20px;
+ padding:12px clamp(18px,4vw,40px);background:rgba(4,6,11,.78);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.logo{font-family:var(--disp);font-weight:900;font-style:italic;letter-spacing:.12em;font-size:1.15rem;color:#fff;text-decoration:none}
+.logo i{font-style:italic;color:var(--accent);text-shadow:0 0 18px var(--accent)}
+nav .links{display:flex;gap:18px;margin-left:auto;font-family:var(--mono);font-size:.78rem;letter-spacing:.06em}
+nav .links a{color:var(--mut);text-decoration:none}
+nav .links a:hover{color:var(--accent)}
+/* mode switch */
+.mode{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em}
+.mode button{background:transparent;color:var(--mut);border:0;padding:7px 13px;cursor:pointer;transition:.25s}
+.mode button.on{background:var(--accent);color:#02040a;font-weight:600}
+.lang{font-family:var(--mono);font-size:.75rem;color:var(--mut);cursor:pointer;border:1px solid var(--line);border-radius:3px;padding:6px 10px;background:transparent}
+.lang b{color:var(--accent)}
+/* buttons */
+.btn{display:inline-block;font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+ font-size:.95rem;padding:15px 30px;text-decoration:none;transition:.2s;cursor:pointer;border:0;
+ clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}
+.btn-p{background:var(--accent);color:#02040a}
+.btn-p:hover{filter:brightness(1.18);box-shadow:0 0 34px color-mix(in srgb,var(--accent) 55%,transparent);transform:translateY(-2px)}
+.btn-g{border:1px solid var(--line);color:var(--txt);background:rgba(255,255,255,.03)}
+.btn-g:hover{border-color:var(--accent);color:var(--accent)}
+/* headings & tags */
+.tag{font-family:var(--mono);font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:var(--accent)}
+h1,h2,h3{font-family:var(--disp);text-transform:uppercase;line-height:1.04}
+h2{font-size:clamp(1.7rem,4vw,2.7rem);font-weight:900;letter-spacing:.01em;margin-bottom:14px}
+.sub{color:var(--mut);max-width:640px;margin-bottom:38px}
+section{padding:96px 0 30px}
+.hl{color:var(--accent)}
+/* reveal */
+.reveal{opacity:0;transform:translateY(26px);transition:all .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+/* ---------- SPLIT HERO ---------- */
+.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;position:relative;padding-top:60px}
+.side{position:relative;display:flex;flex-direction:column;justify-content:center;gap:20px;padding:70px clamp(24px,4.5vw,58px);overflow:hidden;transition:filter .5s}
+.side-arcade{background:linear-gradient(160deg,rgba(53,182,255,.10),rgba(255,93,85,.05) 60%,transparent)}
+.side-lab{background:linear-gradient(200deg,rgba(167,139,250,.10),rgba(53,182,255,.05) 60%,transparent);border-left:1px solid var(--line)}
+.hero:hover .side{filter:saturate(.5) brightness(.6)}
+.hero .side:hover{filter:none}
+.side .kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.32em;text-transform:uppercase}
+.side-arcade .kicker{color:var(--cyan)}.side-lab .kicker{color:var(--lilac)}
+.side h1{font-size:clamp(2.2rem,4.6vw,3.7rem);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.005em}
+.side h1 .c2{display:block}
+.side-arcade h1 .c2{background:linear-gradient(92deg,var(--red),var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent}
+.side-lab h1 .c2{background:linear-gradient(92deg,var(--lilac),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.side p{color:var(--mut);max-width:430px}
+.side .cta{display:flex;gap:12px;flex-wrap:wrap}
+.side-arcade .btn-p{background:var(--cyan)}.side-lab .btn-p{background:var(--lilac)}
+.side ul{list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+.side li{font-family:var(--mono);font-size:.68rem;letter-spacing:.05em;padding:4px 10px;border-radius:2px}
+.side-arcade li{border:1px solid rgba(53,182,255,.3);color:var(--cyan)}
+.side-lab li{border:1px solid rgba(167,139,250,.35);color:var(--lilac)}
+.divider{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line);z-index:3}
+.vs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;width:66px;height:66px;display:grid;place-items:center;
+ background:var(--void);border:1px solid var(--amber);border-radius:50%;font-family:var(--disp);font-weight:900;font-size:1.2rem;font-style:italic;color:var(--amber);
+ box-shadow:0 0 40px rgba(255,197,61,.35);cursor:pointer}
+.scanline{position:absolute;left:0;right:0;height:110px;top:-110px;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--cyan) 7%,transparent));animation:sweep 7s linear infinite;pointer-events:none}
+.side-lab .scanline{background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--lilac) 8%,transparent))}
+@keyframes sweep{to{transform:translateY(calc(100vh + 130px))}}
+.scrollhint{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:4;font-family:var(--mono);font-size:.65rem;letter-spacing:.3em;color:var(--mut);animation:bob 2.4s infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+@media(max-width:900px){.hero{grid-template-columns:1fr;min-height:0}.divider,.vs{display:none}.side{padding:64px 22px}.side-lab{border-left:0;border-top:1px solid var(--line)}}
 </style>
 </head>
-<body>
-<div class="scanlines"></div><div class="glowline"></div>
-
+<body class="arcade">
+<div class="grid"></div>
 <nav>
-  <a class="logo" href="#"><span class="o">OVER</span><span class="m">MIND</span></a>
-  <div class="navlinks">
-    <a href="#modes"><span class="en">Modes</span><span class="es">Modos</span></a>
-    <a href="#loadout"><span class="en">Loadout</span><span class="es">Equipo</span></a>
-    <a href="#how"><span class="en">How to play</span><span class="es">Cómo se juega</span></a>
-    <a href="#specs"><span class="en">Specs</span><span class="es">Requisitos</span></a>
+  <a class="logo" href="#top">OVER<i>MIND</i></a>
+  <div class="links">
+    <a href="#arcade" data-arc>ARCADE</a><a href="#lab" data-lab>LAB</a>
+    <a href="#screens">SCREENS</a><a href="#priv">PRIVACY</a><a href="#repo">REPO</a>
   </div>
-  <div><button class="langbtn" id="lang">ES | EN</button></div>
+  <div class="mode"><button id="m-arc" class="on">🎮 ARCADE</button><button id="m-lab">🔬 LAB</button></div>
+  <button class="lang" id="langbtn"><b id="langnow">ES</b> | EN</button>
 </nav>
 
-<!-- HERO -->
-<header class="hero">
-  <div class="press"><span class="en">INSERT HEADSET TO CONTINUE</span><span class="es">INSERTA EL CASCO PARA CONTINUAR</span></div>
-  <h1>
-    <span class="en"><span class="l1">YOUR FOCUS</span><span class="l2">IS THE</span><span class="l3">WEAPON.</span></span>
-    <span class="es"><span class="l1">TU FOCO</span><span class="l2">ES EL</span><span class="l3">ARMA.</span></span>
-  </h1>
-  <p class="lead">
-    <span class="en">OVERMIND is a real <b>1v1 fighting game powered by your brainwaves</b>. Plug a ~$20 EEG headset, stare down your friend and out-<b>focus</b> them. No controller. No excuses. No cloud — your brain data never leaves your device.</span>
-    <span class="es">OVERMIND es un juego de lucha <b>1v1 real controlado por tus ondas cerebrales</b>. Enchufa un casco EEG de ~20€, planta cara a tu colega y <b>gánale en foco</b>. Sin mando. Sin excusas. Sin nube — tus datos cerebrales no salen de tu dispositivo.</span>
-  </p>
-  <div class="ctas">
-    <a class="btn fires" href="https://github.com/Thempra/overmind-ng/releases"><span class="en">⬇ GET THE APK</span><span class="es">⬇ CONSEGUIR EL APK</span></a>
-    <a class="btn ghost" href="https://github.com/Thempra/overmind-ng"><span class="en">★ STAR THE REPO</span><span class="es">★ STAR EN EL REPO</span></a>
+<header class="hero" id="top">
+  <div class="side side-arcade" onclick="setMode('arcade')">
+    <div class="scanline"></div>
+    <div class="kicker">🎮 Mode 01 — For Players</div>
+    <h1><span class="en">YOUR FOCUS<br>IS THE WEAPON<span class="c2">YOUR CALM IS THE SHIELD</span></span><span class="es">TU FOCO ES EL ARMA<span class="c2">TU CALMA ES EL ESCUDO</span></span></h1>
+    <p class="en">OVERMIND turns a ~$20 EEG headset into a game controller. <b>1v1 mind battles</b> on one couch: focus to fire, calm to shield, blink for the ultimate. Plus a mental arcade with streaks and highscores.</p>
+    <p class="es">OVERMIND convierte un casco EEG de ~20 € en un mando de juego. <b>Duelos mentales 1v1</b> en un sofá: foco para disparar, calma para escudo, parpadeo para la ultimate. Más un arcade mental con rachas y récords.</p>
+    <div class="cta">
+      <a class="btn btn-p" href="https://github.com/Thempra/overmind-ng/releases" target="_blank" rel="noopener"><span class="en">⬇ GET THE APK</span><span class="es">⬇ CONSEGUIR APK</span></a>
+      <a class="btn btn-g" href="#arcade"><span class="en">Enter the arcade →</span><span class="es">Entrar al arcade →</span></a>
+    </div>
+    <ul>
+      <li>1v1 LOCAL</li><li>6+ MODES</li><li><span class="en">TTK 60–90s</span><span class="es">TTK 60–90s</span></li><li>ANDROID 8+</li>
+    </ul>
   </div>
-  <div class="ticker"><div class="in" id="tick"></div></div>
+  <div class="divider"></div><div class="vs" title="switch">VS</div>
+  <div class="side side-lab" onclick="setMode('lab')">
+    <div class="scanline"></div>
+    <div class="kicker">🔬 Mode 02 — For Researchers</div>
+    <h1><span class="en">A PORTABLE<span class="c2">EEG RESEARCH BENCH</span></span><span class="es">BANCO PORTÁTIL<span class="c2">DE NEUROCIENCIA</span></span></h1>
+    <p class="en">A validated ThinkGear pipeline rendered as a live lab instrument: attention/meditation streams, <b>8 raw EEG bands</b> (delta → gamma), signal quality per electrode, up to 4 headsets monitored at once. Data never leaves the device.</p>
+    <p class="es">Un pipeline ThinkGear validado renderizado como instrumento de laboratorio: atención/meditación en vivo, <b>8 bandas EEG crudas</b> (delta → gamma), calidad de señal por electrodo, hasta 4 cascos monitorizados a la vez. Los datos no salen del dispositivo.</p>
+    <div class="cta">
+      <a class="btn btn-p" href="https://github.com/Thempra/overmind-ng" target="_blank" rel="noopener"><span class="en">◉ Read the source</span><span class="es">◉ Leer el código</span></a>
+      <a class="btn btn-g" href="#lab"><span class="en">Open the lab →</span><span class="es">Abrir el lab →</span></a>
+    </div>
+    <ul>
+      <li>8 BANDS</li><li>≤4 HEADSETS</li><li><span class="en">SIGNAL GATE</span><span class="es">GATE DE SEÑAL</span></li><li><span class="en">NO CLOUD</span><span class="es">SIN NUBE</span></li>
+    </ul>
+  </div>
+  <div class="scrollhint">SCROLL ▼</div>
 </header>
 
-<!-- VS -->
-<div class="vs">
-  <div class="fighter p1 reveal">
-    <h3><span class="en">🧠 Player 1 — FOCUS</span><span class="es">🧠 Jugador 1 — FOCO</span></h3>
-    <ul>
-      <li><span class="en">Attack power</span><span class="es">Poder de ataque</span><b>ATTENTION ↑</b></li>
-      <li><span class="en">Fire rate</span><span class="es">Cadencia</span><b>ATTENTION ↑</b></li>
-      <li><span class="en">Shield regen</span><span class="es">Regen de escudo</span><b>MEDITATION ↑</b></li>
-      <li><span class="en">Ult trigger</span><span class="es">Activador de ultimate</span><b>BLINK ⚡</b></li>
-    </ul>
+<main class="wrap">
+<!-- SHARED: why the project is good -->
+<section id="why" class="reveal">
+  <div class="tag">// ONE HEADSET, TWO WORLDS</div>
+  <h2><span class="en">Same silicon. Two serious products.</span><span class="es">Mismo silicio. Dos productos en serio.</span></h2>
+  <p class="sub"><span class="en">OVERMIND is one Flutter app on one validated signal pipeline. Gamers get a zero-latency brain controller; researchers get an honest, transparent instrument. No cloud tax, no accounts, no black boxes.</span><span class="es">OVERMIND es una sola app Flutter sobre un único pipeline de señal validado. Los gamers obtienen un mando cerebral de latencia cero; los investigadores, un instrumento honesto y transparente. Sin tasas de nube, sin cuentas, sin cajas negras.</span></p>
+  <div class="cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px">
+    <div class="card"><div class="num mono">01</div><h3><span class="en">Real-time, on-device</span><span class="es">Tiempo real, en dispositivo</span></h3><p class="en">EEG frames parsed on a background isolate; the game never waits on I/O. Feedback loop under one second — the loop that makes neurofeedback work.</p><p class="es">Los frames EEG se parsean en un isolate en segundo plano; el juego nunca espera a E/S. Bucle de retroalimentación bajo un segundo — el bucle que hace funcionar el neurofeedback.</p></div>
+    <div class="card"><div class="num mono">02</div><h3><span class="en">Validated by blood</span><span class="es">Validado con sangre</span></h3><p class="en">The signal chain (ASIC raw values → normalization → EMA + 900 ms debounce → blink takeBlink) is a byte-for-byte port of the legacy Overmind after a field session with 6 real headsets. Not a mockup.</p><p class="es">La cadena de señal (valores ASIC crudos → normalización → EMA + debounce 900 ms → takeBlink del parpadeo) es un port byte a byte del Overmind clásico tras una sesión de campo con 6 cascos reales. No un mockup.</p></div>
+    <div class="card"><div class="num mono">03</div><h3><span class="en">Radical privacy</span><span class="es">Privacidad radical</span></h3><p class="en">Brain data is stored locally, deleted with the app, and there is no upload path in the codebase. A neuro-tech product you can audit line by line.</p><p class="es">Los datos cerebrales se guardan en local, se borran con la app y no existe ninguna ruta de subida en el código. Neurotecnología que puedes auditar línea a línea.</p></div>
+    <div class="card"><div class="num mono">04</div><h3><span class="en">~$20 hardware</span><span class="es">Hardware de ~20 €</span></h3><p class="en">Runs on MindWave Mobile 2 / any ThinkGear device (classic, BLE or ASIC packet). Research-grade pipelines usually cost $1,000+ in hardware; this demotes price, not method.</p><p class="es">Funciona con MindWave Mobile 2 / cualquier dispositivo ThinkGear (clásico, BLE o paquete ASIC). Los pipelines de nivel investigación suelen costar $1,000+ en hardware; aquí se rebaja el precio, no el método.</p></div>
   </div>
-  <div class="vsbadge">VS</div>
-  <div class="fighter p2 reveal">
-    <h3><span class="en">😴 Player 2 — CALM</span><span class="es">😴 Jugador 2 — CALMA</span></h3>
-    <ul>
-      <li><span class="en">Attack power</span><span class="es">Poder de ataque</span><b>ATTENTION ↑</b></li>
-      <li><span class="en">Fire rate</span><span class="es">Cadencia</span><b>ATTENTION ↑</b></li>
-      <li><span class="en">Shield regen</span><span class="es">Regen de escudo</span><b>MEDITATION ↑</b></li>
-      <li><span class="en">Ult trigger</span><span class="es">Activador de ultimate</span><b>BLINK ⚡</b></li>
-    </ul>
+</section>
+<style>
+.card{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel));padding:26px;border-radius:4px;transition:.25s;position:relative}
+.card:hover{border-color:var(--accent);transform:translateY(-4px)}
+.card .num{color:var(--accent);font-size:.72rem;letter-spacing:.2em}
+.card h3{font-size:1.06rem;margin:10px 0 8px;letter-spacing:.02em}
+.card p{color:var(--mut);font-size:.92rem}
+</style>
+<!-- ARCADE ZONE -->
+<section id="arcade" data-arc class="reveal">
+  <div class="tag" style="color:var(--cyan)">// ARCADE ZONE — PLAYER REPORT</div>
+  <h2><span class="en">Your brain, nerfed to 60 Hz.</span><span class="es">Tu cerebro, balanceado a 60 Hz.</span></h2>
+  <p class="sub"><span class="en">No thumbs, no mouse. The only input is your mental state — and it's brutally honest. Fake focus dies in 900 ms.</span><span class="es">Sin pulgares, sin ratón. La única entrada es tu estado mental — y es brutalmente honesto. El foco fingido muere en 900 ms.</span></p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px">
+    <div class="card"><div class="tag mono" style="color:var(--red)">MODE_01 · 1v1</div><h3><span class="en">Mind Battle</span><span class="es">Duelo Mental</span></h3><p class="en">Two headsets, one device, one couch. Attention = fire rate. Meditation = shield regen. Blink = ultimate. TTK 60–90 s of pure prefrontal combat. GG is written by the calmest one.</p><p class="es">Dos cascos, un dispositivo, un sofá. Atención = cadencia. Meditación = regen de escudo. Parpadeo = ultimate. TTK de 60–90 s de combate prefrontal puro. El GG lo escribe el más tranquilo.</p></div>
+    <div class="card"><div class="tag mono" style="color:var(--amber)">MODE_02 · ARCADE</div><h3><span class="en">Mental Arcade</span><span class="es">Arcade Mental</span></h3><p class="en">Balloon (inflate with focus, don't pop), Falcon (flap by focusing), Seesaw (balance focus vs calm). Highscores, daily streaks with a streak-freeze item, mental points that carry across every mode.</p><p class="es">Globo (ínflalo con foco, sin reventarlo), Halcón (aletea enfocando), Balancín (equilibra foco vs calma). Récords, rachas diarias con congelador, puntos mentales que atraviesan todos los modos.</p></div>
+    <div class="card"><div class="tag mono" style="color:var(--green)">META</div><h3><span class="en">Streaks & Mental Points</span><span class="es">Rachas y Puntos Mentales</span></h3><p class="en">One economy across all games: train meditation today, feed your battle aim tomorrow. Daily streak with a freezable miss — progress that respects real life.</p><p class="es">Una sola economía para todos los juegos: entrena meditación hoy, alimenta tu puntería de duelo mañana. Racha diaria con fallo congelable — progreso que respeta la vida real.</p></div>
+    <div class="card"><div class="tag mono" style="color:var(--cyan)">HUD</div><h3><span class="en">Sci-Fi HUD</span><span class="es">HUD Sci-Fi</span></h3><p class="en">An Evangelion-inspired interface where the HP bar is your actual attention graph. You literally see your own brain state driving the fight — which is also, quietly, neurofeedback.</p><p class="es">Una interfaz inspirada en Evangelion donde la barra de vida es tu gráfica de atención real. Ves literalmente tu estado cerebral piloteando la pelea — lo cual, sin hacer ruido, es neurofeedback.</p></div>
   </div>
-</div>
-
-<!-- MODES -->
-<section id="modes">
-  <div class="eyebrow reveal"><span class="en">Select your game</span><span class="es">Selecciona tu juego</span></div>
-  <h2 class="reveal"><span class="en">THE <span class="hl">ARCADE</span> IS IN YOUR HEAD</span><span class="es">EL <span class="hl">ARCADE</span> ESTÁ EN TU CABEZA</span></h2>
-  <p class="sub reveal"><span class="en">Real screenshots from the shipping build. Every mode trains a different neural stat.</span><span class="es">Capturas reales de la build actual. Cada modo entrena una stat neural distinta.</span></p>
-  <div class="modes">
-    <a class="mode reveal" href="https://github.com/Thempra/overmind-ng/releases">
-      <span class="slot">MODE_01</span><span class="players">1P v 1P</span>
-      <img src="game_screen.png" alt="1v1 mind battle">
-      <div class="body"><h3><span class="en">Mind Battle</span><span class="es">Duelo Mental</span></h3>
-      <p><span class="en">Focus to fire fireballs. Calm to hold the shield. First player to break concentration loses. Bring a friend and a second headset.</span><span class="es">Concéntrate para disparar bolas de fuego. Mantén la calma para aguantar el escudo. El primero que pierda el foco, pierde. Trae colega y segundo casco.</span></p>
-      <div class="stat">TTK 60-90s · SKIN: EVA vs SACHIEL</div></div>
-    </a>
-    <a class="mode reveal" href="https://github.com/Thempra/overmind-ng/releases">
-      <span class="slot">MODE_02</span><span class="players">1P</span>
-      <img src="home_researcher.png" alt="Mental games">
-      <div class="body"><h3><span class="en">Mental Arcade</span><span class="es">Arcade Mental</span></h3>
-      <p><span class="en">Balloon: inflate it with pure zen. Falcon: kill comets with one blink. Seesaw duel: the ultimate calm-vs-focus balance test.</span><span class="es">Globo: ínflalo con zen puro. Halcón: mata cometas de un parpadeo. Duelo balancín: la prueba definitiva de calma vs foco.</span></p>
-      <div class="stat">HIGHSCORES · DAILY STREAK · +MENTAL PTS</div></div>
-    </a>
-    <a class="mode reveal" href="https://github.com/Thempra/overmind-ng/releases">
-      <span class="slot">MODE_03</span><span class="players">1-4P</span>
-      <img src="settings_themes.png" alt="Researcher mode and settings">
-      <div class="body"><h3><span class="en">Lab Mode</span><span class="es">Modo Lab</span></h3>
-      <p><span class="en">Raw attention/meditation graphs, all 8 EEG bands, up to 4 headsets streaming at once. Flex your real numbers.</span><span class="es">Gráficas crudas de atención/meditación, las 8 bandas EEG, hasta 4 cascos emitiendo a la vez. Presume de números reales.</span></p>
-      <div class="stat">LIVE EEG · 8 BANDS · SIGNAL QUALITY</div></div>
-    </a>
+  <div class="quote reveal" style="margin-top:34px;font-family:var(--disp);font-style:italic;font-size:clamp(1.2rem,2.6vw,1.8rem);color:var(--cyan)">
+    <span class="en">"Skill issue? No. Calm issue."</span><span class="es">"¿Te falta skill? No. Te falta calma."</span>
   </div>
 </section>
 
-<!-- LOADOUT -->
-<section id="loadout">
-  <div class="eyebrow reveal"><span class="en">Why it slaps</span><span class="es">Por qué mola</span></div>
-  <h2 class="reveal"><span class="en">YOUR <span class="hr">LOADOUT</span></span><span class="es">TU <span class="hr">EQUIPO</span></span></h2>
-  <p class="sub reveal"><span class="en">Everything in the build right now. Nothing paywalled. Never.</span><span class="es">Todo lo que hay en la build actual. Nada de pago. Nunca.</span></p>
-  <div class="loadout">
-    <div class="item reveal"><span class="no">01</span><div><h3><span class="en">Local 1v1 — couch PvP, brain edition</span><span class="es">1v1 local — PvP de sofá, edición cerebro</span></h3><p><span class="en">Two headsets, one device. Party-game energy with actual skill ceiling.</span><span class="es">Dos cascos, un dispositivo. Energía de party game con techo de habilidad real.</span></p></div><span class="chip">P1<span class="en"> vs </span><span class="es"> vs </span>P2</span></div>
-    <div class="item reveal"><span class="no">02</span><div><h3><span class="en">Streaks, records &amp; mental points</span><span class="es">Rachas, récords y puntos mentales</span></h3><p><span class="en">Daily streak with a freeze token. Bank points just by playing. Grind responsibly.</span><span class="es">Racha diaria con token de congelación. Acumula puntos solo por jugar. Grindea con cabeza.</span></p></div><span class="chip">META</span></div>
-    <div class="item reveal"><span class="no">03</span><div><h3><span class="en">Adaptive difficulty (DDA)</span><span class="es">Dificultad adaptativa (DDA)</span></h3><p><span class="en">Thresholds retune mid-run. Never too sweaty, never too boring.</span><span class="es">Los umbrales se reajustan en plena partida. Ni troppo sudado, ni aburrido.</span></p></div><span class="chip">NEVER BORING</span></div>
-    <div class="item reveal"><span class="no">04</span><div><h3><span class="en">Unlockable battle skins</span><span class="es">Skins de batalla desbloqueables</span></h3><p><span class="en">NERV core and superpowers arenas. More on the roadmap.</span><span class="es">Arenas NERV core y superpoderes. Más en el roadmap.</span></p></div><span class="chip">COSMETICS</span></div>
-    <div class="item reveal"><span class="no">05</span><div><h3><span class="en">100% offline. Zero telemetry.</span><span class="es">100% offline. Cero telemetría.</span></h3><p><span class="en">No account. No server. Your brain data never leaves the device. Airplane-mode compatible.</span><span class="es">Sin cuenta. Sin servidor. Tus datos cerebrales no salen del dispositivo. Compatible con modo avión.</span></p></div><span class="chip">PRIVACY W ✓</span></div>
-    <div class="item reveal"><span class="no">06</span><div><h3><span class="en">Free &amp; open source</span><span class="es">Gratis y open source</span></h3><p><span class="en">Full source on GitHub. Fork it, audit it, mod it.</span><span class="es">Código completo en GitHub. Forkealo, audítalo, modealo.</span></p></div><span class="chip">FOSS</span></div>
+<!-- LAB ZONE -->
+<section id="lab" data-lab class="reveal">
+  <div class="tag" style="color:var(--lilac)">// LAB ZONE — METHODOLOGY ON THE TABLE</div>
+  <h2><span class="en">Neurofeedback without the black box.</span><span class="es">Neurofeedback sin caja negra.</span></h2>
+  <p class="sub"><span class="en">Lab Mode exposes the whole pipeline: what the ASIC reports, how it's normalized, how it's smoothed — all on screen, all in the open. Built to explore attention training, not to sell diagnoses.</span><span class="es">El Modo Lab expone todo el pipeline: qué reporta el ASIC, cómo se normaliza, cómo se suaviza — todo en pantalla, todo a la vista. Construido para explorar el entrenamiento de atención, no para vender diagnósticos.</span></p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px">
+    <div class="card"><div class="tag mono" style="color:var(--lilac)">SIGNAL</div><h3><span class="en">8 EEG bands, live</span><span class="es">8 bandas EEG, en vivo</span></h3><p class="en">Delta, theta, low/high alpha, low/high beta, low/high gamma from the ASIC EEG power register, normalized with the legacy project's published constants — the same math across sessions, so observations are comparable.</p><p class="es">Delta, theta, alfa low/high, beta low/high, gamma low/high desde el registro de potencia EEG del ASIC, normalizadas con las constantes publicadas del proyecto clásico — la misma matemática entre sesiones, para que las observaciones sean comparables.</p></div>
+    <div class="card"><div class="tag mono" style="color:var(--cyan)">RIGOR</div><h3><span class="en">Quality gate first</span><span class="es">Primero, el gate de calidad</span></h3><p class="en">Every reading carries its electrode quality. Bad contact locks actions instead of poisoning the record — a discipline borrowed from clinical practice, visible in plain UI.</p><p class="es">Cada lectura lleva su calidad de electrodo. Un mal contacto bloquea acciones en vez de envenenar el registro — una disciplina prestada de la práctica clínica, visible en la UI.</p></div>
+    <div class="card"><div class="tag mono" style="color:var(--green)">MULTI-SESSION</div><h3><span class="en">Up to 4 headsets</span><span class="es">Hasta 4 cascos</span></h3><p class="en">Monitor four participants simultaneously on one tablet — small-group pilots, classroom demos, twin experiments. One connection per endpoint, single-consumer protection against packet loss.</p><p class="es">Monitoriza a cuatro participantes a la vez en una tablet — pilotos en grupo pequeño, demos de aula, experimentos por duplicado. Una conexión por endpoint, protección monoconsumo contra pérdida de paquetes.</p></div>
+    <div class="card"><div class="tag mono" style="color:var(--amber)">OPEN METHOD</div><h3><span class="en">Auditable by design</span><span class="es">Auditable por diseño</span></h3><p class="en">Full PRD/TRD/schema in the repo, constants in code, zero obfuscation. A student can reproduce every number on screen. Wellness tool — not a medical device, and we say so out loud.</p><p class="es">PRD/TRD/esquema completos en el repo, constantes en el código, cero ofuscación. Un estudiante puede reproducir cada número en pantalla. Herramienta de bienestar — no dispositivo médico, y lo decimos alto.</p></div>
   </div>
 </section>
 
-<!-- HOW -->
-<section id="how">
-  <div class="eyebrow reveal"><span class="en">Tutorial — 3 min speedrun</span><span class="es">Tutorial — speedrun de 3 min</span></div>
-  <h2 class="reveal"><span class="en">FROM ZERO TO <span class="hl">FIRST BLOOD</span></span><span class="es">DE CERO A <span class="hl">PRIMERA SANGRE</span></span></h2>
-  <p class="sub reveal"><span class="en">No config files. No PC. No tutorials longer than this.</span><span class="es">Sin ficheros de config. Sin PC. Sin tutoriales más largos que esto.</span></p>
-  <div class="keys">
-    <div class="key reveal"><span class="cap">STEP_01.EXE</span><h3><span class="en">Grab the APK</span><span class="es">Pilla el APK</span></h3><p><span class="en">One file from GitHub Releases. Android 8+, tablet recommended.</span><span class="es">Un archivo desde GitHub Releases. Android 8+, tablet recomendada.</span></p></div>
-    <div class="key reveal"><span class="cap">STEP_02.EXE</span><h3><span class="en">Pair the headset</span><span class="es">Empareja el casco</span></h3><p><span class="en">Any ThinkGear EEG (MindWave-style). Bluetooth. Wet the sensor, mount up.</span><span class="es">Cualquier EEG ThinkGear (estilo MindWave). Bluetooth. Humedece el sensor y colócatelo.</span></p></div>
-    <div class="key reveal"><span class="cap">STEP_03.EXE</span><h3><span class="en">Calibrate 5s</span><span class="es">Calibra 5 s</span></h3><p><span class="en">Relax or focus for 5 seconds. The game learns YOU — thresholds are yours alone.</span><span class="es">Relájate o concéntrate 5 segundos. El juego te aprende a TI — los umbrales son solo tuyos.</span></p></div>
-    <div class="key reveal"><span class="cap">GG</span><h3><span class="en">Destroy your friend</span><span class="es">Destroza a tu colega</span></h3><p><span class="en">Winner is whoever meditates AND focuses better. Trash talk is free. No headset yet? Demo signal lets you scout first.</span><span class="es">Gana quien medite Y se concentre mejor. El trash talk es gratis. ¿Sin casco aún? La señal demo te deja explorar.</span></p></div>
+<!-- SCREENS -->
+<section id="screens" class="reveal">
+  <div class="tag">// CAPTURED FROM A REAL BUILD</div>
+  <h2><span class="en">No renders. Real app.</span><span class="es">Sin renders. App real.</span></h2>
+  <p class="sub"><span class="en">Screenshots straight from the shipped APK — battle HUD, lab view and settings.</span><span class="es">Capturas directas del APK publicado — HUD de batalla, vista de lab y ajustes.</span></p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+    <figure class="shot"><img src="game_screen.png" alt="Mind Battle 1v1 HUD" loading="lazy"><figcaption><span class="en">Mind Battle — attention is firepower</span><span class="es">Duelo Mental — la atención es potencia de fuego</span></figcaption></figure>
+    <figure class="shot"><img src="home_researcher.png" alt="Researcher mode, EEG bands" loading="lazy"><figcaption><span class="en">Lab Mode — 8 bands + signal quality</span><span class="es">Modo Lab — 8 bandas + calidad de señal</span></figcaption></figure>
+    <figure class="shot"><img src="settings_themes.png" alt="Themes and settings" loading="lazy"><figcaption><span class="en">Themes — HUD your way</span><span class="es">Temas — el HUD a tu gusto</span></figcaption></figure>
   </div>
 </section>
+<style>
+.shot{border:1px solid var(--line);background:var(--panel);border-radius:4px;overflow:hidden;transition:.25s}
+.shot:hover{border-color:var(--accent);transform:translateY(-4px)}
+.shot img{width:100%;display:block}
+.shot figcaption{font-family:var(--mono);font-size:.75rem;color:var(--mut);padding:12px 14px}
+</style>
 
-<!-- SPECS -->
-<section id="specs">
-  <div class="eyebrow reveal"><span class="en">Rig requirements</span><span class="es">Requisitos del rig</span></div>
-  <h2 class="reveal"><span class="en">LOW <span class="hl">SPECS.</span> <span class="hr">HIGH SKILL.</span></span><span class="es">BAJOS <span class="hl">REQUISITOS.</span> <span class="hr">ALTO SKILL.</span></span></h2>
-  <p class="sub reveal"><span class="en">*Single-channel EEG headsets speaking the NeuroSky ThinkGear protocol — MindWave Mobile 1/2 and equivalents.</span><span class="es">*Cascos EEG de un canal con protocolo NeuroSky ThinkGear — MindWave Mobile 1/2 y equivalentes.</span></p>
-  <div class="hw">
-    <div class="col y reveal"><h3><span class="en">✅ REQUIRED</span><span class="es">✅ REQUERIDO</span></h3><ul>
-      <li><span class="en">Android 8+ phone/tablet</span><span class="es">Móvil/tablet Android 8+</span></li>
-      <li><span class="en">ThinkGear* EEG headset (~$20)</span><span class="es">Casco EEG ThinkGear* (~20€)</span></li>
-      <li><span class="en">Opponent (optional but recommended)</span><span class="es">Rival (opcional pero recomendado)</span></li>
-    </ul></div>
-    <div class="col n reveal"><h3><span class="en">🚫 NOT NEEDED</span><span class="es">🚫 NO HACE FALTA</span></h3><ul>
-      <li><span class="en">Gaming PC</span><span class="es">PC gamer</span></li>
-      <li><span class="en">Internet</span><span class="es">Internet</span></li>
-      <li><span class="en">Accounts / subs</span><span class="es">Cuentas / suscripciones</span></li>
-      <li><span class="en">$1000 brain scanner</span><span class="es">Escáner cerebral de 1000€</span></li>
-    </ul></div>
-    <div class="col q reveal"><h3><span class="en">★ WHO IT'S FOR</span><span class="es">★ PARA QUIÉN</span></h3><ul>
-      <li><span class="en">Party gamers hunting the next couch killer</span><span class="es">Gamers de fiesta buscando el próximo mata-sofás</span></li>
-      <li><span class="en">Meditators who secretly want leaderboards</span><span class="es">Meditadores que en secreto quieren rankings</span></li>
-      <li><span class="en">Tinkerers &amp; modders (FOSS)</span><span class="es">Trastas y modders (FOSS)</span></li>
-    </ul></div>
+<!-- PRIVACY -->
+<section id="priv" class="reveal">
+  <div class="tag">// THE NON-NEGOTIABLE</div>
+  <h2 style="max-width:760px"><span class="en">Your brainwaves are not a product.</span><span class="es">Tus ondas cerebrales no son un producto.</span></h2>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px" class="mono">
+    <span class="pill">✓ <span class="en">No account</span><span class="es">Sin cuenta</span></span>
+    <span class="pill">✓ <span class="en">No cloud</span><span class="es">Sin nube</span></span>
+    <span class="pill">✓ <span class="en">No ads</span><span class="es">Sin anuncios</span></span>
+    <span class="pill">✓ <span class="en">No telemetry</span><span class="es">Sin telemetría</span></span>
+    <span class="pill">✓ <span class="en">Offline by construction</span><span class="es">Offline por construcción</span></span>
+    <span class="pill">✓ GPL · <span class="en">fork it</span><span class="es">forkealo</span></span>
   </div>
 </section>
+<style>
+.pill{border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);padding:9px 16px;font-size:.78rem;border-radius:2px;letter-spacing:.04em}
+</style>
 
-<!-- CTA -->
-<section>
-  <div class="cta reveal">
-    <h2><span class="en">GLHF. <span class="hl">GG goes to the calmest.</span></span><span class="es">GLHF. <span class="hl">El GG es para el más tranquilo.</span></span></h2>
-    <p><span class="en">Free forever. Open source. 100% offline. The only skill ceiling is you.</span><span class="es">Gratis para siempre. Open source. 100% offline. El único techo de skill eres tú.</span></p>
-    <div class="ctas" style="justify-content:center">
-      <a class="btn fires" href="https://github.com/Thempra/overmind-ng/releases"><span class="en">⬇ PLAY NOW — GET THE APK</span><span class="es">⬇ JUEGA YA — PILLAR EL APK</span></a>
-      <a class="btn ghost" href="https://github.com/Thempra/overmind-ng"><span class="en">FORK / STAR / ISSUE</span><span class="es">FORK / STAR / ISSUE</span></a>
-    </div>
+<!-- REPO / CTA -->
+<section id="repo" class="reveal" style="text-align:center;padding-bottom:60px">
+  <div class="tag">// JOIN THE BUILD</div>
+  <h2 style="margin-inline:auto"><span class="en">Star it. Mod it. Battle with it.</span><span class="es">Dale star. Modifícalo. Batalla con él.</span></h2>
+  <p class="sub" style="margin-inline:auto"><span class="en">Flutter source, docs, foundation specs and every decision — public. The repo is the lab notebook and the arcade cabinet.</span><span class="es">Código Flutter, documentación, especificaciones fundacionales y cada decisión — público. El repo es el cuaderno de laboratorio y la máquina recreativa.</span></p>
+  <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+    <a class="btn btn-p" href="https://github.com/Thempra/overmind-ng" target="_blank" rel="noopener"><span class="en">★ STAR ON GITHUB</span><span class="es">★ STAR EN GITHUB</span></a>
+    <a class="btn btn-g" href="https://github.com/Thempra/overmind-ng/releases" target="_blank" rel="noopener"><span class="en">⬇ Download APK</span><span class="es">⬇ Descargar APK</span></a>
   </div>
+  <p class="mono" style="margin-top:22px;color:var(--mut);font-size:.75rem">github.com/Thempra/overmind-ng · Flutter · Android 8+ · ThinkGear / MindWave Mobile 2</p>
 </section>
 
-<footer>
-  OVERMIND // BUILT BY THEM PRA // FLUTTER + FLAME // <span class="en">NOT A MEDICAL DEVICE — IT'S A DUEL</span><span class="es">NO ES UN DISPOSITIVO MÉDICO — ES UN DUELO</span>
+<footer style="border-top:1px solid var(--line);padding:26px 0;text-align:center" class="mono">
+  <span style="color:var(--mut);font-size:.72rem">OVERMIND — wellness & play tool, not a medical device · MIT/GPL code, open method · © 2026 Thempra</span>
 </footer>
+</main>
 
 <script>
-// ---------- i18n ----------
-const TITLES={en:"OVERMIND — Your focus is the weapon. 1v1 mind battles.",es:"OVERMIND — Tu foco es el arma. Duelos mentales 1v1."};
-function setLang(l){document.documentElement.lang=l;localStorage.setItem("om-lang",l);document.title=TITLES[l];}
-const stored=localStorage.getItem("om-lang");
-setLang(stored||(navigator.language.startsWith("es")?"es":"en"));
-document.getElementById("lang").onclick=()=>setLang(document.documentElement.lang==="en"?"es":"en");
-// ---------- ticker ----------
-const ITEMS={
- en:["P1 FOCUS <em>78</em> · P2 CALM <i>91</i>","NEW RECORD — BALLOON <em>+240</em>","STREAK ×14 🔥","SACHIEL DOWN <i>x3</i>","BLINK COMBO <em>⚡⚡</em>","MENTAL PTS <em>4,120</em>","DDA RETUNED","P2 TILTED <i>😤</i>"],
- es:["P1 FOCO <em>78</em> · P2 CALMA <i>91</i>","RÉCORD NUEVO — GLOBO <em>+240</em>","RACHA ×14 🔥","SACHIEL ELIMINADO <i>x3</i>","COMBO PARPADEO <em>⚡⚡</em>","PTS MENTALES <em>4.120</em>","DDA REAJUSTADO","P2 EN TILT <i>😤</i>"]};
-function buildTicker(){
-  const its=ITEMS[document.documentElement.lang]||ITEMS.en;
-  const row=its.map(t=>"<span>"+t+"</span>").join("");
-  document.getElementById("tick").innerHTML=row+row;
-}
-buildTicker();
-new MutationObserver(buildTicker).observe(document.documentElement,{attributes:true,attributeFilter:["lang"]});
-// ---------- reveal ----------
-const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("on");io.unobserve(e.target);}}),{threshold:.12});
-document.querySelectorAll(".reveal").forEach(el=>io.observe(el));
+const html=document.documentElement;
+function setLang(l){html.lang=l;localStorage.setItem('om-lang',l);document.getElementById('langnow').textContent=l.toUpperCase();document.title=l==='es'?'OVERMIND — Tu foco es el arma · Banco EEG portátil':'OVERMIND — Your focus is the weapon · Portable EEG bench';}
+function setMode(m){document.body.className=m;document.getElementById('m-arc').classList.toggle('on',m==='arcade');document.getElementById('m-lab').classList.toggle('on',m==='lab');localStorage.setItem('om-mode',m);}
+document.getElementById('langbtn').onclick=()=>setLang(html.lang==='es'?'en':'es');
+document.getElementById('m-arc').onclick=()=>setMode('arcade');
+document.getElementById('m-lab').onclick=()=>setMode('lab');
+document.querySelector('.vs').onclick=()=>setMode(document.body.classList.contains('arcade')?'lab':'arcade');
+const sl=localStorage.getItem('om-lang')||(navigator.language.startsWith('es')?'es':'en');setLang(sl);
+const sm=localStorage.getItem('om-mode');if(sm)setMode(sm);
+const io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&e.target.classList.add('in')),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 </script>
 </body>
 </html>
