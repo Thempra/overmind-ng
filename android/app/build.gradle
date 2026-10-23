@@ -1,9 +1,25 @@
+import java.util.Properties
+
 plugins {
     id "com.android.application"
     id "kotlin-android"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
+
+// --- Firma de release: el keystore NUNCA se versiona -------------------------
+// Prioridad: 1) variables de entorno (CI), 2) android/key.properties (dev local).
+// Sin keystore -> se firma con debug keys y se avisa por consola (APK NO publicable).
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+def opt = { String prop, String envName, String fallback ->
+    System.getenv(envName) ?: keystoreProperties.getProperty(prop) ?: fallback
+}
+def ksPath = opt("storeFile", "OVERMIND_KEYSTORE_PATH", null)
+def hasReleaseKeystore = ksPath != null && new File(ksPath).isAbsolute() && new File(ksPath).exists()
 
 android {
     namespace = "com.thempra.overmind"
@@ -20,21 +36,37 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.thempra.overmind"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            release {
+                storeFile = new File(ksPath)
+                storePassword = opt("storePassword", "OVERMIND_KEYSTORE_PASSWORD", null)
+                keyAlias = opt("keyAlias", "OVERMIND_KEY_ALIAS", "overmind")
+                keyPassword = opt("keyPassword", "OVERMIND_KEY_PASSWORD", null)
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.release
+            } else {
+                signingConfig = signingConfigs.debug
+                logger.warn("AVISO: sin keystore de release -> APK firmado con DEBUG keys (NO publicable).")
+            }
+            minifyEnabled = false
+            shrinkResources = false
         }
     }
 }

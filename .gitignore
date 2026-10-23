@@ -45,3 +45,9 @@ graphify-out/
 
 android/build/
 tool/icon_512.png
+
+# Android signing — NUNCA versionar
+android/key.properties
+*.jks
+*.keystore
+*.p12
