@@ -95,8 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child:
-                              CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.bluetooth_searching,
                           color: OvermindColors.evaCyan),
@@ -107,8 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(
                 child: FilledButton.icon(
                   onPressed: store.isScanning ? null : () => _loadBonded(store),
-                  icon: const Icon(Icons.link,
-                      color: OvermindColors.evaCyan),
+                  icon: const Icon(Icons.link, color: OvermindColors.evaCyan),
                   label: Text(s.bonded),
                 ),
               ),
@@ -171,13 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  context
-                      .watch<LocaleController>()
-                      .locale
-                      .languageCode ==
-                          'en'
-                      ? 'Game mode'
-                      : 'Modo de juego',
+                  s.gameMode,
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
@@ -185,8 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right,
-                  color: OvermindColors.textDim),
+              const Icon(Icons.chevron_right, color: OvermindColors.textDim),
             ],
           ),
         ),
@@ -214,13 +205,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       for (final d in list)
         Container(
           margin: const EdgeInsets.only(bottom: 8),
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: OvermindColors.panel,
             borderRadius: BorderRadius.circular(12),
-            border:
-                Border.all(color: OvermindColors.evaCyan.withOpacity(0.4)),
+            border: Border.all(color: OvermindColors.evaCyan.withOpacity(0.4)),
           ),
           child: Row(
             children: [
@@ -245,9 +234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       d.isClassic
                           ? 'SPP'
-                          : (d.rssi != 0
-                                ? '${d.rssi} dBm'
-                                : s.bondedLabel),
+                          : (d.rssi != 0 ? '${d.rssi} dBm' : s.bondedLabel),
                       style: const TextStyle(
                         color: OvermindColors.textDim,
                         fontSize: 12,
@@ -263,15 +250,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   visualDensity: VisualDensity.compact,
                 ),
-                onPressed: _connectingId == d.id
-                    ? null
-                    : () => _connect(store, d),
+                onPressed:
+                    _connectingId == d.id ? null : () => _connect(store, d),
                 child: _connectingId == d.id
                     ? const SizedBox(
                         width: 14,
                         height: 14,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Text(s.connect),
               ),
@@ -414,8 +399,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: OvermindColors.sachielRed.withOpacity(0.15),
               borderRadius: BorderRadius.circular(20),

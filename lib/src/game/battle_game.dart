@@ -8,17 +8,21 @@ import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flame/particles.dart';
 
-import '../eeg/eeg_data.dart';
 import '../state/eeg_store.dart';
+import 'battle_logic.dart';
 import 'battle_theme.dart';
 
 // ===========================================================================
 //  Overmind — Fighting 1v1 (FLAME)
 //  Cada jugador lanza bolas de fuego al rival. La mecánica está ligada
 //  al EEG de cada jugador:
-//    • ATENCIÓN   → velocidad y daño de las bolas de fuego (ataque)
-//    • MEDITACIÓN → escudo regenerador que absorbe el daño recibido
-//  Gana el primer luchador que deje el HP del rival a 0.
+//    • ATENCIÓN   → cadencia y daño de las bolas de fuego (ataque)
+//    • MEDITACIÓN → escudo fraccional que absorbe parte del daño recibido
+//  Gana el primero que deje el HP del rival a 0, o quien tenga más HP al
+//  agotarse el tiempo (muerte súbita a los 80 s, empate posible).
+//
+//  La SIMULACIÓN vive en `battle_logic.dart` (pura, testeable headless);
+//  este fichero solo pinta el estado y dispara el audio.
 //  El aspecto (fondo, avatares, colores, nombres) lo define un [BattleTheme].
 // ===========================================================================
 
@@ -28,12 +32,19 @@ class BattleGame extends FlameGame with TapCallbacks {
     required this.player1Slot,
     required this.player2Slot,
     this.theme = BattleTheme.evangelion,
+    this.tuning = const BattleTuning(),
   });
 
   final EegStore store;
   final int player1Slot;
   final int player2Slot;
   final BattleTheme theme;
+
+  /// Ajustes de balance del duelo (ver [BattleTuning]).
+  final BattleTuning tuning;
+
+  /// Simulación pura del duelo: sin Flame, sin Canvas, sin audio.
+  late final BattleLogic logic = BattleLogic(tuning: tuning);
 
   Fighter? player1;
   Fighter? player2;
@@ -77,17 +88,13 @@ class BattleGame extends FlameGame with TapCallbacks {
 
     player1 = Fighter(
       image: left,
-      side: 1,
-      facing: 1,
-      centerHome: Vector2.zero(),
+      state: logic.left,
       flameColor: theme.leftColor,
       ballImage: fbLeft,
     )..priority = 5;
     player2 = Fighter(
       image: right,
-      side: 2,
-      facing: -1,
-      centerHome: Vector2.zero(),
+      state: logic.right,
       flameColor: theme.rightColor,
       ballImage: fbRight,
     )..priority = 5;
@@ -137,8 +144,24 @@ class BattleGame extends FlameGame with TapCallbacks {
 
     // Luchadores anclados a los bordes (izquierda/derecha), a una altura
     // relativa a la pantalla, con tamaño proporcional a la altura.
-    player1?.layoutAt(_res, 1, _k);
-    player2?.layoutAt(_res, 2, _k);
+    player1?.layoutAt(_res, _k);
+    player2?.layoutAt(_res, _k);
+
+    // La simulación usa exactamente la misma geometría que el render, para
+    // que los impactos medidos en test coincidan con lo que se ve.
+    if (player1 != null && player2 != null) {
+      logic.layout(ArenaGeometry(
+        width: _res.x,
+        height: _res.y,
+        scale: _k,
+        leftWidth: player1!.size.x,
+        leftHeight: player1!.size.y,
+        rightWidth: player2!.size.x,
+        rightHeight: player2!.size.y,
+        margin: 20.0 * _k,
+      ));
+    }
+
     _hud?.size = _res;
     _hud?.setScale(_k);
     _vsBanner?.size = _res;
@@ -148,34 +171,13 @@ class BattleGame extends FlameGame with TapCallbacks {
   @override
   void onTapDown(TapDownEvent event) {
     if (_vsTimer > 0 || gameOver) return;
-    _spawn(player1!);
-    _spawn(player2!);
+    _spawn(logic.left);
+    _spawn(logic.right);
   }
 
-  void _spawn(Fighter f) {
-    if (f.charge < 0.5) f.charge = 0.8; // el toque dispara enseguida
-  }
-
-  Fighter _opponentOf(Fighter f) =>
-      (f.side == 1) ? player2! : player1!;
-
-  void _fire(Fighter from) {
-    final target = _opponentOf(from);
-    final ball = Fireball(
-      side: from.side,
-      facing: from.facing,
-      start: from.muzzle,
-      targetY: target.center.y,
-      power: from.attention,
-      image: from.ballImage,
-      color: from.flameColor,
-      scale: k,
-    )..priority = 10;
-    add(ball);
-    _fireballs.add(ball);
-    from.charge = 0;
-    from.recoil = 0.15;
-    _playFire();
+  /// Atajo de accesibilidad: el toque adelanta la carga pendiente.
+  void _spawn(FighterState f) {
+    if (f.charge < 0.5) f.charge = 0.8;
   }
 
   void _playFire() {
@@ -224,50 +226,63 @@ class BattleGame extends FlameGame with TapCallbacks {
     _vsBanner?.remaining = 0;
     if (gameOver) return;
 
-    // Refrescar los datos EEG de cada luchador y lanzar bolas según atención.
-    player1!.readEeg(store.devices[player1Slot]);
-    player2!.readEeg(store.devices[player2Slot]);
-    player1!.updateFighter(dt, _fire);
-    player2!.updateFighter(dt, _fire);
+    // Refrescar los datos EEG de cada luchador.
+    final e1 = store.devices[player1Slot];
+    final e2 = store.devices[player2Slot];
+    logic.readEeg(1,
+        attention: e1?.attention.toDouble() ?? 0,
+        meditation: e1?.meditation.toDouble() ?? 0);
+    logic.readEeg(2,
+        attention: e2?.attention.toDouble() ?? 0,
+        meditation: e2?.meditation.toDouble() ?? 0);
 
-    // Avanzar proyectiles y detectar impactos.
-    final w = _res.x;
-    for (final ball in _fireballs) {
-      ball.move(dt);
-      final target = _opponentOf(_fighterOf(ball)!);
-      if (_hitTest(ball, target)) {
-        _applyHit(target, ball);
-        ball.removeFromParent();
-      } else if (ball.position.x < -80 || ball.position.x > w + 80) {
-        ball.removeFromParent();
+    // Un paso de simulación; el render consume los eventos del frame.
+    for (final ev in logic.update(dt)) {
+      switch (ev) {
+        case ShotFired(:final projectile):
+          _spawnFireball(projectile);
+        case ShotHit(:final projectile, :final absorbed):
+          _onHit(projectile, absorbed);
+        case DuelEnded e:
+          _endGame(e);
       }
+    }
+
+    // Sincronizar los sprites con los proyectiles vivos de la simulación.
+    final live = logic.projectiles.map((p) => p.id).toSet();
+    for (final ball in _fireballs) {
+      if (!live.contains(ball.projectile.id)) ball.removeFromParent();
     }
     _fireballs.removeWhere((b) => b.parent == null);
 
     // Shake decay.
     if (_shake > 0) _shake = math.max(0, _shake - dt * 3);
 
-    // ¿Alguien por debajo de 0?
-    if (player1!.hp <= 0) _endGame(2);
-    else if (player2!.hp <= 0) _endGame(1);
+    // El centro lo manda la simulación (incluye la flotación idle).
+    player1!.applyLogicCenter(logic.centerOf(1));
+    player2!.applyLogicCenter(logic.centerOf(2));
   }
 
-  Fighter? _fighterOf(Fireball b) => b.side == 1 ? player1 : player2;
-
-  bool _hitTest(Fireball ball, Fighter target) {
-    final dx = (ball.position.x - target.center.x).abs();
-    final dy = (ball.position.y - target.center.y).abs();
-    final hitX = dx < target.size.x * 0.55;
-    final hitY = dy < target.size.y * 0.5;
-    return hitX && hitY;
+  void _spawnFireball(Projectile p) {
+    final from = p.side == 1 ? player1! : player2!;
+    final ball = Fireball(
+      projectile: p,
+      targetY: p.targetY,
+      power: p.power,
+      image: from.ballImage,
+      color: from.flameColor,
+      scale: k,
+    )..priority = 10;
+    add(ball);
+    _fireballs.add(ball);
+    _playFire();
   }
 
-  void _applyHit(Fighter target, Fireball ball) {
-    final dmg = (4 + ball.power * 0.16).clamp(2.0, 22.0).toDouble();
-    final absorbed = target.takeDamage(dmg);
-    _explode(ball.position.clone(), ball.color, ball.power / 10 + 1);
+  void _onHit(Projectile p, double absorbed) {
+    final from = p.side == 1 ? player1! : player2!;
+    _explode(Vector2(p.x, p.y), from.flameColor, p.power / 10 + 1);
     _shake = 8;
-    _hud!.flash(ball.side, absorbed > 0);
+    _hud!.flash(p.side, absorbed > 0);
     if (!_audioOk || _hit == null) return;
     try {
       _hit!.seek(Duration.zero);
@@ -275,21 +290,26 @@ class BattleGame extends FlameGame with TapCallbacks {
     } catch (_) {}
   }
 
-  void _endGame(int winnerSide) {
-    final name = winnerSide == 1 ? theme.leftName : theme.rightName;
-    winner = '$name gana';
+  void _endGame(DuelEnded ev) {
+    if (ev.draw) {
+      winner = 'Empate';
+    } else {
+      final name = ev.winnerSide == 1 ? theme.leftName : theme.rightName;
+      winner = '$name gana';
+    }
     overlays.add('gameOver');
   }
 
   void restart() {
     winner = null;
     _vsTimer = 2.2;
-    player1!.reset();
-    player2!.reset();
+    logic.restart();
     for (final b in _fireballs) {
       b.removeFromParent();
     }
     _fireballs.clear();
+    player1!.applyLogicCenter(logic.centerOf(1));
+    player2!.applyLogicCenter(logic.centerOf(2));
     overlays.remove('gameOver');
   }
 
@@ -319,9 +339,7 @@ class BattleGame extends FlameGame with TapCallbacks {
 class Fighter extends PositionComponent {
   Fighter({
     required Image image,
-    required this.side,
-    required this.facing,
-    required this.centerHome,
+    required this.state,
     required this.flameColor,
     required this.ballImage,
   })  : image = image,
@@ -330,29 +348,30 @@ class Fighter extends PositionComponent {
             image.width.toDouble() * 1.15,
             image.height.toDouble() * 1.15,
           ),
-        ) {
-    position = centerHome - size / 2;
-  }
+        );
 
   final Image image;
-  final int side;
-  final int facing; // 1 = mira a la derecha, -1 = a la izquierda
-  final Vector2 centerHome;
+
+  /// Estado de simulación que este componente pinta (vive en [BattleLogic]).
+  final FighterState state;
+
   final Color flameColor;
   final Image ballImage;
 
   /// Factor de escala (altura de pantalla / 1080) para los dibujos fijos.
   double k = 1;
 
-  double hp = 100;
-  double shield = 0;
-  double attention = 0;
-  double meditation = 0;
-  double charge = 0;
-  double recoil = 0;
-  double hitFlash = 0;
-  double _bob = 0;
   double _pulse = 0;
+
+  int get side => state.side;
+  int get facing => side == 1 ? 1 : -1;
+
+  double get attention => state.attention;
+  double get meditation => state.meditation;
+  double get shield => state.shield;
+  double get hp => state.hp;
+  double get recoil => state.recoil;
+  double get hitFlash => state.hitFlash;
 
   Vector2 get center => position.clone() + size / 2;
   Vector2 get muzzle => Vector2(
@@ -360,38 +379,14 @@ class Fighter extends PositionComponent {
         center.y - size.y * 0.15,
       );
 
-  void readEeg(EegData? eeg) {
-    attention = eeg?.attention.toDouble() ?? 0;
-    meditation = eeg?.meditation.toDouble() ?? 0;
-  }
-
-  /// Actualiza velocidad de carga (atención) y escudo (meditación).
-  void updateFighter(double dt, void Function(Fighter) fire) {
-    _bob += dt * 2;
-    _pulse += dt * 3;
-
-    // Escudo tiende a la meditación (0..100).
-    shield = shield + (meditation - shield) * dt * 1.2;
-    if (shield < 0) shield = 0;
-
-    // Carga de bola según atención: más atención ⇒ dispara más rápido.
-    charge += dt * (0.35 + attention / 100 * 2.6);
-    if (charge >= 1.0) {
-      fire(this);
-    }
-
-    if (recoil > 0) recoil -= dt;
-    if (hitFlash > 0) hitFlash -= dt;
-
-    // Pequeña flotación "idle".
-    position.y = (centerHome.y - size.y / 2) + math.sin(_bob) * 10 * k;
+  /// Coloca el sprite en el centro que calcula la simulación.
+  void applyLogicCenter(Offset2 c) {
+    position.setValues(c.x - size.x / 2, c.y - size.y / 2);
   }
 
   void reset() {
-    hp = 100;
-    shield = 0;
-    charge = 0;
-    position.setFrom(centerHome - size / 2);
+    state.reset();
+    applyHome();
   }
 
   /// Sitúa al luchador en su posición base (usado al re-posicionar el layout).
@@ -399,9 +394,12 @@ class Fighter extends PositionComponent {
     position.setFrom(centerHome - size / 2);
   }
 
+  /// Posición de reposo del luchador, recalculada en [layoutAt].
+  final Vector2 centerHome = Vector2.zero();
+
   /// Recalcula tamaño y posición anclando al borde de la pantalla.
-  /// `screen` = resolución real del widget; `side` 1=izquierda, 2=derecha.
-  void layoutAt(Vector2 screen, int side, double s) {
+  /// `screen` = resolución real del widget; el lado lo fija [state].
+  void layoutAt(Vector2 screen, double s) {
     k = s;
     size.setValues(
       image.width.toDouble() * 1.15 * s,
@@ -415,14 +413,10 @@ class Fighter extends PositionComponent {
     position.setFrom(centerHome - size / 2);
   }
 
-  /// Aplica daño teniendo en cuenta el escudo. Devuelve el daño absorbido.
-  double takeDamage(double dmg) {
-    hitFlash = 0.18;
-    final absorbed = math.min(shield, dmg);
-    shield -= absorbed;
-    final real = dmg - absorbed;
-    hp = math.max(0, hp - real);
-    return absorbed;
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _pulse += dt * 3;
   }
 
   @override
@@ -446,12 +440,13 @@ class Fighter extends PositionComponent {
       ..blendMode = BlendMode.plus;
     canvas.drawCircle(Offset(cx, cy), auraR, auraPaint);
 
-    // ---- Anillo de escudo (meditación) ----
-    if (shield > 1) {
+    // ---- Anillo de escudo (fracción 0-1 del cap, no escala 0-100) ----
+    final shieldFrac = state.shieldFraction;
+    if (state.shield > 0.5) {
       final ring = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = (6 + shield * 0.05) * k
-        ..color = const Color(0xFFB0F7FF).withOpacity(0.35 + shield / 100 * 0.5)
+        ..strokeWidth = (6 + shieldFrac * 12) * k
+        ..color = const Color(0xFFB0F7FF).withOpacity(0.35 + shieldFrac * 0.5)
         ..blendMode = BlendMode.plus;
       canvas.drawCircle(Offset(cx, cy), size.x * 0.62, ring);
     }
@@ -461,10 +456,26 @@ class Fighter extends PositionComponent {
     final spritePaint = Paint();
     if (flash) {
       spritePaint.colorFilter = const ColorFilter.matrix(<double>[
-        2, 0, 0, 0, -128,
-        0, 1, 0, 0, 0,
-        0, 0, 2, 0, -128,
-        0, 0, 0, 1, 0,
+        2,
+        0,
+        0,
+        0,
+        -128,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        -128,
+        0,
+        0,
+        0,
+        1,
+        0,
       ]);
     }
     final src =
@@ -496,7 +507,7 @@ class Fighter extends PositionComponent {
 
     // ---- Medidores sobre la cabeza ----
     drawMeter(canvas, cx, -30 * k, attention / 100, flameColor, 'ATN');
-    drawMeter(canvas, cx, -54 * k, shield / 100, const Color(0xFFB0F7FF), 'MDT');
+    drawMeter(canvas, cx, -54 * k, shieldFrac, const Color(0xFFB0F7FF), 'MDT');
   }
 
   void drawMeter(Canvas canvas, double cx, double y, double frac, Color color,
@@ -529,24 +540,22 @@ class Fighter extends PositionComponent {
 // ===========================================================================
 class Fireball extends PositionComponent {
   Fireball({
-    required this.side,
-    required this.facing,
-    required Vector2 start,
+    required this.projectile,
     required this.targetY,
     required this.power,
     required this.image,
     required this.color,
     double scale = 1,
   }) : super(
-          position: start,
+          position: Vector2(projectile.x, projectile.y),
           anchor: Anchor.center,
           size: Vector2.all(70 * (1 + power / 100) * scale),
         ) {
     scaleFactor = scale;
   }
 
-  final int side;
-  final int facing;
+  /// Proyectil de la simulación que este sprite representa.
+  final Projectile projectile;
   final double targetY;
   final double power;
   final Image image;
@@ -555,13 +564,14 @@ class Fireball extends PositionComponent {
 
   double _t = 0;
 
-  void move(double dt) {
+  int get side => projectile.side;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
     _t += dt;
-    position += Vector2(
-          facing * (520 + power * 3) * scaleFactor,
-          (targetY - position.y) * 2,
-        ) *
-        dt;
+    // La trayectoria la manda la simulación; el sprite solo la refleja.
+    position.setValues(projectile.x, projectile.y);
   }
 
   @override
@@ -629,9 +639,15 @@ class Hud extends PositionComponent {
   }
 
   void flash(int side, bool absorbed) {
-    if (side == 1) flashP1 = 1; else flashP2 = 1;
+    if (side == 1)
+      flashP1 = 1;
+    else
+      flashP2 = 1;
     if (absorbed) {
-      if (side == 1) shieldP1 = 1; else shieldP2 = 1;
+      if (side == 1)
+        shieldP1 = 1;
+      else
+        shieldP2 = 1;
     }
   }
 
@@ -644,15 +660,14 @@ class Hud extends PositionComponent {
     final barH = 34.0 * k;
     final md = w * 0.035; // margen ~ proporcional al ancho
 
-    _bar(canvas, md, top, barW, p1?.hp ?? 0, theme.leftColor,
-        flashP1, true, k);
-    _bar(canvas, w - md - barW, top, barW, p2?.hp ?? 0,
-        theme.rightColor, flashP2, false, k);
+    _bar(canvas, md, top, barW, p1?.state, theme.leftColor, flashP1, true, k);
+    _bar(canvas, w - md - barW, top, barW, p2?.state, theme.rightColor, flashP2,
+        false, k);
 
     // Shield mini-bar debajo de cada barra.
-    _miniBar(canvas, md, top + barH + 8 * k, barW, p1?.shield ?? 0,
+    _miniBar(canvas, md, top + barH + 8 * k, barW, p1?.state,
         const Color(0xFFB0F7FF), shieldP1, k);
-    _miniBar(canvas, w - md - barW, top + barH + 8 * k, barW, p2?.shield ?? 0,
+    _miniBar(canvas, w - md - barW, top + barH + 8 * k, barW, p2?.state,
         const Color(0xFFB0F7FF), shieldP2, k);
 
     // Nombres.
@@ -667,14 +682,21 @@ class Hud extends PositionComponent {
       drawText(
           canvas,
           'ATN ${p1!.attention.round()}  MDT ${p1!.meditation.round()}',
-          md, top + barH + 34 * k, 20 * k, const Color(0xFFE6E6E6), 420 * k);
+          md,
+          top + barH + 34 * k,
+          20 * k,
+          const Color(0xFFE6E6E6),
+          420 * k);
     }
     if (p2 != null) {
       drawText(
           canvas,
           'ATN ${p2!.attention.round()}  MDT ${p2!.meditation.round()}',
-          w - md - 420 * k, top + barH + 34 * k, 20 * k,
-          const Color(0xFFE6E6E6), 420 * k,
+          w - md - 420 * k,
+          top + barH + 34 * k,
+          20 * k,
+          const Color(0xFFE6E6E6),
+          420 * k,
           alignRight: true);
     }
 
@@ -682,16 +704,17 @@ class Hud extends PositionComponent {
     final line = Paint()
       ..color = const Color(0x33FFFFFF)
       ..strokeWidth = 2 * k;
-    canvas.drawLine(Offset(0, top + barH + 60 * k),
-        Offset(w, top + barH + 60 * k), line);
+    canvas.drawLine(
+        Offset(0, top + barH + 60 * k), Offset(w, top + barH + 60 * k), line);
   }
 
-  void _bar(Canvas canvas, double x, double y, double w, double hp,
+  void _bar(Canvas canvas, double x, double y, double w, FighterState? st,
       Color color, double flash, bool left, double k) {
     final r = RRect.fromRectAndRadius(
         Rect.fromLTWH(x, y, w, 34 * k), Radius.circular(8 * k));
     canvas.drawRRect(r, Paint()..color = const Color(0xB0000000));
-    final frac = (hp / 100).clamp(0.0, 1.0);
+    // Fracción real de vida (HP 260: un /100 fijo dejaría la barra al 38 %).
+    final frac = st?.hpFraction ?? 0;
     final fillW = w * frac;
     final gp = Paint()
       ..shader = Gradient.linear(
@@ -705,26 +728,30 @@ class Hud extends PositionComponent {
             Rect.fromLTWH(x, y, fillW, 34 * k), Radius.circular(8 * k)),
         gp);
     if (flash > 0) {
-      canvas.drawRRect(r, Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4 * k
-        ..color = const Color(0xFFFFFFFF).withOpacity(flash));
+      canvas.drawRRect(
+          r,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4 * k
+            ..color = const Color(0xFFFFFFFF).withOpacity(flash));
     }
+    final hp = st?.hp ?? 0;
     drawText(canvas, '${hp.toStringAsFixed(0)}', x, y + 4 * k, 24 * k,
         const Color(0xFFFFFFFF), 60 * k,
         alignRight: !left);
   }
 
-  void _miniBar(Canvas canvas, double x, double y, double w, double val,
+  void _miniBar(Canvas canvas, double x, double y, double w, FighterState? st,
       Color color, double flash, double k) {
     canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, 8 * k),
-            Radius.circular(4 * k)),
+        RRect.fromRectAndRadius(
+            Rect.fromLTWH(x, y, w, 8 * k), Radius.circular(4 * k)),
         Paint()..color = const Color(0x66000000));
-    final fill = ((val / 100) * w).clamp(0.0, w);
+    // Fracción del cap de escudo (30), no de una escala 0-100.
+    final fill = ((st?.shieldFraction ?? 0) * w).clamp(0.0, w);
     canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, fill, 8 * k),
-            Radius.circular(4 * k)),
+        RRect.fromRectAndRadius(
+            Rect.fromLTWH(x, y, fill, 8 * k), Radius.circular(4 * k)),
         Paint()..color = color);
   }
 
@@ -739,13 +766,11 @@ class Hud extends PositionComponent {
       fontSize: size,
       fontWeight: FontWeight.w800,
       shadows: const [
-        Shadow(
-            color: Color(0xAA000000), blurRadius: 4, offset: Offset(1, 1)),
+        Shadow(color: Color(0xAA000000), blurRadius: 4, offset: Offset(1, 1)),
       ],
     ));
     pb.addText(text);
-    final para = pb.build()
-      ..layout(ParagraphConstraints(width: width));
+    final para = pb.build()..layout(ParagraphConstraints(width: width));
     canvas.drawParagraph(para, Offset(x, y));
   }
 }
@@ -782,8 +807,8 @@ class VsBanner extends PositionComponent {
       ..strokeWidth = 3 * k;
     canvas.drawLine(Offset(0, cy + 40 * k), Offset(cx - 40 * k, cy + 40 * k),
         line..strokeWidth = 3 * k);
-    canvas.drawLine(Offset(cx + 40 * k, cy + 40 * k), Offset(size.x, cy + 40 * k),
-        line..strokeWidth = 3 * k);
+    canvas.drawLine(Offset(cx + 40 * k, cy + 40 * k),
+        Offset(size.x, cy + 40 * k), line..strokeWidth = 3 * k);
 
     _text(canvas, theme.leftName, cx - 340 * k, cy - 30 * k, 54 * k,
         theme.leftColor.withOpacity(alpha), 320 * k, TextAlign.right);
@@ -794,8 +819,14 @@ class VsBanner extends PositionComponent {
 
     if (remaining < 1.1) {
       final pulse = 0.7 + 0.3 * math.sin(remaining * 22);
-      _text(canvas, '¡PELEA!', cx - 150 * k, cy + 70 * k, 46 * k,
-          Color(0xFFFFFF00).withOpacity(alpha * pulse), 300 * k,
+      _text(
+          canvas,
+          '¡PELEA!',
+          cx - 150 * k,
+          cy + 70 * k,
+          46 * k,
+          Color(0xFFFFFF00).withOpacity(alpha * pulse),
+          300 * k,
           TextAlign.center);
     }
   }

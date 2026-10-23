@@ -1,5 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' show Locale, PlatformDispatcher;
+
 import 'package:flutter/foundation.dart';
-import 'dart:ui' show Locale;
+import 'package:path_provider/path_provider.dart';
 
 /// Textos de la interfaz en español e inglés.
 class AppStrings {
@@ -42,6 +47,28 @@ class AppStrings {
     required this.rematch,
     required this.demo,
     required this.done,
+    required this.gameMode,
+    required this.device,
+    required this.analysis,
+    required this.mindLevels,
+    required this.signal,
+    required this.signalGood,
+    required this.attention,
+    required this.meditation,
+    required this.lowAlpha,
+    required this.highAlpha,
+    required this.lowBeta,
+    required this.highBeta,
+    required this.lowGamma,
+    required this.highGamma,
+    required this.attShort,
+    required this.medShort,
+    required this.lowAlphaShort,
+    required this.highAlphaShort,
+    required this.lowBetaShort,
+    required this.highBetaShort,
+    required this.lowGammaShort,
+    required this.highGammaShort,
   });
 
   final String playerMode;
@@ -82,6 +109,42 @@ class AppStrings {
   final String rematch;
   final String demo;
   final String done;
+
+  /// Modo de juego (título de la pantalla de selección y entrada en Ajustes).
+  final String gameMode;
+
+  /// Nombre por defecto de un dispositivo EEG sin nombre asignado.
+  final String device;
+
+  /// Título del analizador de atención/meditación.
+  final String analysis;
+
+  /// Título de la pantalla de niveles de onda.
+  final String mindLevels;
+
+  /// Etiqueta de calidad de señal (0 = buena).
+  final String signal;
+  final String signalGood;
+
+  /// Etiquetas del analizador (atención, meditación y bandas EEG).
+  final String attention;
+  final String meditation;
+  final String lowAlpha;
+  final String highAlpha;
+  final String lowBeta;
+  final String highBeta;
+  final String lowGamma;
+  final String highGamma;
+
+  /// Versiones cortas para el eje X de la gráfica de barras.
+  final String attShort;
+  final String medShort;
+  final String lowAlphaShort;
+  final String highAlphaShort;
+  final String lowBetaShort;
+  final String highBetaShort;
+  final String lowGammaShort;
+  final String highGammaShort;
 
   static const es = AppStrings._(
     playerMode: 'Jugador',
@@ -124,6 +187,28 @@ class AppStrings {
     rematch: 'Revancha',
     demo: 'demo',
     done: 'Listo',
+    gameMode: 'Modo de juego',
+    device: 'Dispositivo',
+    analysis: 'Análisis',
+    mindLevels: 'Niveles de Mente',
+    signal: 'Señal',
+    signalGood: '0 = buena',
+    attention: 'Atención',
+    meditation: 'Meditación',
+    lowAlpha: 'Alfa baja',
+    highAlpha: 'Alfa alta',
+    lowBeta: 'Beta baja',
+    highBeta: 'Beta alta',
+    lowGamma: 'Gamma baja',
+    highGamma: 'Gamma alta',
+    attShort: 'Aten',
+    medShort: 'Medi',
+    lowAlphaShort: 'αBaja',
+    highAlphaShort: 'αAlta',
+    lowBetaShort: 'βBaja',
+    highBetaShort: 'βAlta',
+    lowGammaShort: 'γBaja',
+    highGammaShort: 'γAlta',
   );
 
   static const en = AppStrings._(
@@ -153,10 +238,8 @@ class AppStrings {
     connect: 'Connect',
     connectFailed: 'Connection failed',
     noDevices: 'No devices connected',
-    noDevicesHint:
-        'Connect an EEG via Bluetooth in Settings or use demo mode.',
-    noDevicesFound:
-        'No BLE devices found. Turn on your EEG and scan again.',
+    noDevicesHint: 'Connect an EEG via Bluetooth in Settings or use demo mode.',
+    noDevicesFound: 'No BLE devices found. Turn on your EEG and scan again.',
     play: 'PLAY',
     pickPlayer: 'Pick your EEG device',
     pickTwo: 'Pick 2 players',
@@ -167,19 +250,141 @@ class AppStrings {
     rematch: 'Rematch',
     demo: 'demo',
     done: 'Done',
+    gameMode: 'Game mode',
+    device: 'Device',
+    analysis: 'Analysis',
+    mindLevels: 'Mind Levels',
+    signal: 'Signal',
+    signalGood: '0 = good',
+    attention: 'Attention',
+    meditation: 'Meditation',
+    lowAlpha: 'Low Alpha',
+    highAlpha: 'High Alpha',
+    lowBeta: 'Low Beta',
+    highBeta: 'High Beta',
+    lowGamma: 'Low Gamma',
+    highGamma: 'High Gamma',
+    attShort: 'Att',
+    medShort: 'Med',
+    lowAlphaShort: 'LAlpha',
+    highAlphaShort: 'HAlpha',
+    lowBetaShort: 'LBeta',
+    highBetaShort: 'HBeta',
+    lowGammaShort: 'LGamma',
+    highGammaShort: 'HGamma',
   );
+}
+
+/// Persistencia del idioma en `settings.json` dentro del directorio de soporte
+/// de la aplicación (mismo patrón local-first que el tema y el progreso: sin
+/// plugins ni servicios externos).
+class LocaleSettingsStore {
+  LocaleSettingsStore({Future<Directory> Function()? dirProvider})
+      : _dirProvider = dirProvider ?? getApplicationSupportDirectory;
+
+  static const fileName = 'settings.json';
+  static const localeKey = 'locale';
+
+  final Future<Directory> Function() _dirProvider;
+
+  Future<File> _file() async {
+    final dir = await _dirProvider();
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return File('${dir.path}/$fileName');
+  }
+
+  /// Devuelve el código guardado, o `null` si no hay fichero/clave legible.
+  Future<String?> readLocale() async {
+    try {
+      final f = await _file();
+      if (!await f.exists()) return null;
+      final decoded = jsonDecode(await f.readAsString());
+      if (decoded is! Map) return null;
+      final code = decoded[localeKey];
+      return code is String && code.isNotEmpty ? code : null;
+    } catch (_) {
+      // Fichero corrupto o sin permisos: se ignora y se usa el fallback.
+      return null;
+    }
+  }
+
+  /// Guarda el código conservando el resto de claves de `settings.json`.
+  Future<void> writeLocale(String code) async {
+    try {
+      final f = await _file();
+      var data = <String, dynamic>{};
+      if (await f.exists()) {
+        final decoded = jsonDecode(await f.readAsString());
+        if (decoded is Map) data = decoded.cast<String, dynamic>();
+      }
+      data[localeKey] = code;
+      await f.writeAsString(jsonEncode(data));
+    } catch (_) {
+      // Persistir es best-effort: la app sigue funcionando sin disco.
+    }
+  }
 }
 
 /// Controla el idioma activo y expone los textos correspondientes.
 class LocaleController extends ChangeNotifier {
-  Locale _locale = const Locale('es');
+  LocaleController({
+    LocaleSettingsStore? store,
+    String? systemLanguageCode,
+  })  : _store = store ?? LocaleSettingsStore(),
+        _systemLanguageCode = systemLanguageCode;
+
+  /// Idiomas soportados por la app.
+  static const supported = <String>['es', 'en'];
+
+  /// Fallback cuando no hay nada guardado ni idioma de sistema reconocido.
+  static const fallback = 'es';
+
+  final LocaleSettingsStore _store;
+  final String? _systemLanguageCode;
+
+  Locale _locale = const Locale(fallback);
+  bool _loaded = false;
+
   Locale get locale => _locale;
+
+  /// `true` cuando el idioma ya se resolvió leyendo `settings.json`.
+  ///
+  /// La UI espera a este flag antes de pintar para no mostrar un frame en ES y
+  /// cambiarlo a EN (parpadeo) en cada arranque.
+  bool get loaded => _loaded;
+
   AppStrings get s =>
       _locale.languageCode == 'en' ? AppStrings.en : AppStrings.es;
 
-  void setLocale(String code) {
-    if (_locale.languageCode == code) return;
-    _locale = Locale(code);
+  /// Normaliza `es-ES`, `EN_us`, … a un código soportado (fallback ES).
+  static String normalize(String? code) {
+    final base = (code ?? '').toLowerCase().split(RegExp('[-_]')).first;
+    return supported.contains(base) ? base : fallback;
+  }
+
+  String get _systemLocaleCode {
+    if (_systemLanguageCode != null) return _systemLanguageCode;
+    try {
+      return PlatformDispatcher.instance.locale.languageCode;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  /// Carga el idioma guardado; si no hay, el del sistema con fallback a ES.
+  /// Marca [loaded] y notifica una sola vez.
+  Future<void> load() async {
+    final saved = await _store.readLocale();
+    _locale = Locale(normalize(saved ?? _systemLocaleCode));
+    _loaded = true;
     notifyListeners();
+  }
+
+  void setLocale(String code) {
+    final next = normalize(code);
+    if (_locale.languageCode == next) return;
+    _locale = Locale(next);
+    notifyListeners();
+    unawaited(_store.writeLocale(next));
   }
 }

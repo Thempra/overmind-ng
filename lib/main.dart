@@ -30,12 +30,16 @@ Future<void> main() async {
   final progress = ProgressController();
   progress.load();
 
+  // El idioma se resuelve ANTES del primer frame: settings.json -> sistema -> ES.
+  final locale = LocaleController();
+  await locale.load();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: store),
         ChangeNotifierProvider(create: (_) => ModeController()),
-        ChangeNotifierProvider(create: (_) => LocaleController()),
+        ChangeNotifierProvider.value(value: locale),
         ChangeNotifierProvider.value(value: themeController),
         ChangeNotifierProvider.value(value: progress),
       ],
@@ -49,11 +53,14 @@ class OvermindApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // No se pinta nada hasta tener el locale resuelto: evita el parpadeo
+    // ES -> EN del primer frame cuando el idioma guardado es inglés.
+    final l10n = context.watch<LocaleController>();
     return MaterialApp(
       title: 'Overmind',
       debugShowCheckedModeBanner: false,
       theme: overmindTheme(),
-      home: const HomeScreen(),
+      home: l10n.loaded ? const HomeScreen() : const SizedBox.shrink(),
     );
   }
 }

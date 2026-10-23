@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../game/battle_game.dart';
+import '../i18n/l10n.dart';
 import '../state/battle_theme_controller.dart';
 import '../state/eeg_store.dart';
 
@@ -76,6 +77,7 @@ class _GameOverOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<LocaleController>().s;
     return Center(
       child: Container(
         padding: const EdgeInsets.all(24),
@@ -100,12 +102,12 @@ class _GameOverOverlay extends StatelessWidget {
               children: [
                 FilledButton(
                   onPressed: game.restart,
-                  child: const Text('Revancha'),
+                  child: Text(s.rematch),
                 ),
                 const SizedBox(width: 12),
                 OutlinedButton(
                   onPressed: onExit,
-                  child: const Text('Salir'),
+                  child: Text(s.leave),
                 ),
               ],
             ),

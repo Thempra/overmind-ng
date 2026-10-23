@@ -24,9 +24,7 @@ class ModeSelectionScreen extends StatelessWidget {
       appBar: AppBar(
         leading: const BackButton(),
         title: Text(
-          context.watch<LocaleController>().locale.languageCode == 'en'
-              ? 'Game mode'
-              : 'Modo de juego',
+          s.gameMode,
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
@@ -86,19 +84,14 @@ class ModeSelectionScreen extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: active
-                ? accent.withOpacity(0.18)
-                : OvermindColors.panel,
+            color: active ? accent.withOpacity(0.18) : OvermindColors.panel,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: active ? accent : OvermindColors.panelBorder,
               width: active ? 2 : 1.2,
             ),
             boxShadow: active
-                ? [
-                    BoxShadow(
-                        color: accent.withOpacity(0.3), blurRadius: 20)
-                  ]
+                ? [BoxShadow(color: accent.withOpacity(0.3), blurRadius: 20)]
                 : null,
           ),
           child: Row(
@@ -129,8 +122,7 @@ class ModeSelectionScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                          color: OvermindColors.textDim),
+                      style: const TextStyle(color: OvermindColors.textDim),
                     ),
                   ],
                 ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../eeg/eeg_data.dart';
+import '../i18n/l10n.dart';
 import '../state/eeg_store.dart';
 
 /// Port de [DataAnalyzer] (proyecto Android original): gráfica de línea en
@@ -54,12 +55,13 @@ class _DataAnalyzerScreenState extends State<DataAnalyzerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final eeg = context.select<EegStore, EegData?>(
-        (s) => s.devices[widget.slot]);
-    final name = eeg?.name ?? 'Dispositivo';
+    final eeg =
+        context.select<EegStore, EegData?>((s) => s.devices[widget.slot]);
+    final s = context.watch<LocaleController>().s;
+    final name = eeg?.name ?? s.device;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Análisis — $name')),
+      appBar: AppBar(title: Text('${s.analysis} — $name')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -72,7 +74,8 @@ class _DataAnalyzerScreenState extends State<DataAnalyzerScreen> {
                   gridData: const FlGridData(show: true),
                   titlesData: const FlTitlesData(
                     leftTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true, reservedSize: 32),
+                      sideTitles:
+                          SideTitles(showTitles: true, reservedSize: 32),
                     ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(showTitles: false),
@@ -102,16 +105,16 @@ class _DataAnalyzerScreenState extends State<DataAnalyzerScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _LegendDot(Color(0xFF00C800)),
-                SizedBox(width: 6),
-                Text('Atención'),
-                SizedBox(width: 24),
-                _LegendDot(Color(0xFF0000C8)),
-                SizedBox(width: 6),
-                Text('Meditación'),
+                const _LegendDot(Color(0xFF00C800)),
+                const SizedBox(width: 6),
+                Text(s.attention),
+                const SizedBox(width: 24),
+                const _LegendDot(Color(0xFF0000C8)),
+                const SizedBox(width: 6),
+                Text(s.meditation),
               ],
             ),
           ],
@@ -125,6 +128,8 @@ class _LegendDot extends StatelessWidget {
   const _LegendDot(this.color);
   final Color color;
   @override
-  Widget build(BuildContext context) =>
-      Container(width: 14, height: 14, decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+  Widget build(BuildContext context) => Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle));
 }
