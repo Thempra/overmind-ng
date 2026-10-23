@@ -9,7 +9,7 @@ import '../game/battle_theme.dart';
 /// (archivo JSON simple en el directorio de soporte de la app), de modo que
 /// se recuerde entre sesiones sin depender de servicios externos.
 class BattleThemeController extends ChangeNotifier {
-  BattleTheme _theme = BattleTheme.evangelion;
+  BattleTheme _theme = BattleTheme.neon;
   BattleTheme get theme => _theme;
 
   void setTheme(BattleTheme t) {

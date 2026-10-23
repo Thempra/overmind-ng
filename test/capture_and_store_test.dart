@@ -122,17 +122,17 @@ void main() {
 
     test('BattleThemeController setTheme -> load roundtrip', () async {
       final c = BattleThemeController();
-      c.setTheme(BattleTheme.superpoderes);
+      c.setTheme(BattleTheme.cosmico);
       await Future<void>.delayed(const Duration(milliseconds: 150));
       final p = BattleThemeController();
       await p.load();
-      expect(p.theme.id, 'superpoderes');
+      expect(p.theme.id, BattleTheme.cosmico.id);
     });
 
     test('BattleThemeController.load sin archivo deja el default', () async {
       final c = BattleThemeController();
       await c.load();
-      expect(c.theme.id, BattleTheme.evangelion.id);
+      expect(c.theme.id, BattleTheme.neon.id);
     });
   });
 

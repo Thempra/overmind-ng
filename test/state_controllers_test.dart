@@ -113,28 +113,28 @@ void main() {
 
   group('BattleTheme / controller', () {
     test('byId conocido y fallback', () {
-      expect(BattleTheme.byId('superpoderes').id, 'superpoderes');
-      expect(BattleTheme.byId('no-existe').id, 'evangelion');
-      expect(BattleTheme.evangelion.name('en'), 'Evangelion');
-      expect(BattleTheme.superpoderes.name('es'), 'Superpoderes');
+      expect(BattleTheme.byId('cosmico').id, 'cosmico');
+      expect(BattleTheme.byId('no-existe').id, 'neon');
+      expect(BattleTheme.neon.name('en'), 'Neon');
+      expect(BattleTheme.cosmico.name('es'), 'Cósmico');
       expect(BattleTheme.all, hasLength(2));
     });
 
     test('setTheme cambia y notifica una vez', () {
       final c = BattleThemeController();
-      expect(c.theme.id, 'evangelion');
+      expect(c.theme.id, 'neon');
       var n = 0;
       c.addListener(() => n++);
-      c.setTheme(BattleTheme.superpoderes);
-      c.setTheme(BattleTheme.superpoderes); // mismo id: no-op
-      expect(c.theme.id, 'superpoderes');
+      c.setTheme(BattleTheme.cosmico);
+      c.setTheme(BattleTheme.cosmico); // mismo id: no-op
+      expect(c.theme.id, 'cosmico');
       expect(n, 1);
     });
 
     test('load sin plugin no lanza ni cambia el tema', () async {
       final c = BattleThemeController();
       await c.load();
-      expect(c.theme.id, 'evangelion');
+      expect(c.theme.id, 'neon');
     });
   });
 }

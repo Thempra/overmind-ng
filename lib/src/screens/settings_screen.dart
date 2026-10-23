@@ -83,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _modeEntry(context, s),
           const Divider(height: 36, color: OvermindColors.panelBorder),
 
-          _sectionIcon(s.bluetooth, Icons.bluetooth, OvermindColors.evaCyan),
+          _sectionIcon(s.bluetooth, Icons.bluetooth, OvermindColors.p1Cyan),
           const SizedBox(height: 12),
           // acciones bluetooth
           Row(
@@ -98,7 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.bluetooth_searching,
-                          color: OvermindColors.evaCyan),
+                          color: OvermindColors.p1Cyan),
                   label: Text(store.isScanning ? s.scanning : s.scanBle),
                 ),
               ),
@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(
                 child: FilledButton.icon(
                   onPressed: store.isScanning ? null : () => _loadBonded(store),
-                  icon: const Icon(Icons.link, color: OvermindColors.evaCyan),
+                  icon: const Icon(Icons.link, color: OvermindColors.p1Cyan),
                   label: Text(s.bonded),
                 ),
               ),
@@ -160,11 +160,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: OvermindColors.evaCyan.withOpacity(0.15),
-                  border: Border.all(color: OvermindColors.evaCyan),
+                  color: OvermindColors.p1Cyan.withOpacity(0.15),
+                  border: Border.all(color: OvermindColors.p1Cyan),
                 ),
                 child: const Icon(Icons.swap_horiz,
-                    color: OvermindColors.evaCyan, size: 22),
+                    color: OvermindColors.p1Cyan, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -209,13 +209,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           decoration: BoxDecoration(
             color: OvermindColors.panel,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: OvermindColors.evaCyan.withOpacity(0.4)),
+            border: Border.all(color: OvermindColors.p1Cyan.withOpacity(0.4)),
           ),
           child: Row(
             children: [
               Icon(
                 d.isClassic ? Icons.cable : Icons.bluetooth,
-                color: OvermindColors.evaCyan,
+                color: OvermindColors.p1Cyan,
                 size: 20,
               ),
               const SizedBox(width: 10),
@@ -327,7 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _langChip(LocaleController l10n, String code, String label, bool on) {
     final accent =
-        code == 'es' ? OvermindColors.evaCyan : OvermindColors.sachielRed;
+        code == 'es' ? OvermindColors.p1Cyan : OvermindColors.p2Red;
     return Expanded(
       child: GestureDetector(
         onTap: () => l10n.setLocale(code),
@@ -401,7 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: OvermindColors.sachielRed.withOpacity(0.15),
+              color: OvermindColors.p2Red.withOpacity(0.15),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -409,7 +409,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: OvermindColors.sachielRed,
+                color: OvermindColors.p2Red,
               ),
             ),
           ),

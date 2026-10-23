@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 /// Paleta compartida que une el menú con el juego (battle_game.dart).
-/// EVA-01 = cian, SACHIEL = rojo; fondo oscuro sci-fi; escudo cian-claro.
+/// Jugador 1 = cian, jugador 2 = rojo; fondo oscuro sci-fi; escudo cian-claro.
 abstract final class OvermindColors {
   static const bg = Color(0xFF0A0E16);
   static const bgLighter = Color(0xFF121A2B);
   static const panel = Color(0xFF171F33);
   static const panelBorder = Color(0xFF24304D);
 
-  static const evaCyan = Color(0xFF35B6FF);
-  static const sachielRed = Color(0xFFFF4B4B);
+  static const p1Cyan = Color(0xFF35B6FF);
+  static const p2Red = Color(0xFFFF4B4B);
   static const shield = Color(0xFFB0F7FF);
   static const yellow = Color(0xFFFFE34D);
 
@@ -20,12 +20,12 @@ abstract final class OvermindColors {
 /// Tema oscuro coherente con la estética del juego.
 ThemeData overmindTheme() {
   final scheme = ColorScheme.fromSeed(
-    seedColor: OvermindColors.evaCyan,
+    seedColor: OvermindColors.p1Cyan,
     brightness: Brightness.dark,
     surface: OvermindColors.bg,
   ).copyWith(
-    primary: OvermindColors.evaCyan,
-    secondary: OvermindColors.sachielRed,
+    primary: OvermindColors.p1Cyan,
+    secondary: OvermindColors.p2Red,
     surface: OvermindColors.bg,
     onSurface: OvermindColors.text,
   );

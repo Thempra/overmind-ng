@@ -69,6 +69,11 @@ class AppStrings {
     required this.highBetaShort,
     required this.lowGammaShort,
     required this.highGammaShort,
+    required this.signalOffline,
+    required this.signalBadHint,
+    required this.reconnecting,
+    required this.reconnectingHint,
+    required this.demoChip,
   });
 
   final String playerMode;
@@ -146,6 +151,19 @@ class AppStrings {
   final String lowGammaShort;
   final String highGammaShort;
 
+  /// Chip del HUD: electrodo sin contacto (poorSignal = 200).
+  final String signalOffline;
+
+  /// Banda de aviso: la señal es mala pero la partida sigue.
+  final String signalBadHint;
+
+  /// Overlay de pausa automática por ausencia de paquetes.
+  final String reconnecting;
+  final String reconnectingHint;
+
+  /// Chip que marca un dispositivo simulado (no datos reales).
+  final String demoChip;
+
   static const es = AppStrings._(
     playerMode: 'Jugador',
     researcherMode: 'Investigador',
@@ -209,6 +227,11 @@ class AppStrings {
     highBetaShort: 'βAlta',
     lowGammaShort: 'γBaja',
     highGammaShort: 'γAlta',
+    signalOffline: 'SIN SEÑAL',
+    signalBadHint: 'Señal débil: colócate bien el casco',
+    reconnecting: 'RECONECTANDO',
+    reconnectingHint: 'Sin datos del casco. La partida sigue al reconectar.',
+    demoChip: 'DEMO',
   );
 
   static const en = AppStrings._(
@@ -272,6 +295,11 @@ class AppStrings {
     highBetaShort: 'HBeta',
     lowGammaShort: 'LGamma',
     highGammaShort: 'HGamma',
+    signalOffline: 'NO SIGNAL',
+    signalBadHint: 'Weak signal: adjust the headset',
+    reconnecting: 'RECONNECTING',
+    reconnectingHint: 'No headset data. The match resumes on reconnect.',
+    demoChip: 'DEMO',
   );
 }
 

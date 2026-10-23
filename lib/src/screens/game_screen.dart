@@ -40,6 +40,7 @@ class _GameScreenState extends State<GameScreen> {
       player1Slot: widget.player1Slot,
       player2Slot: widget.player2Slot,
       theme: context.read<BattleThemeController>().theme,
+      strings: context.read<LocaleController>().s,
     );
   }
 

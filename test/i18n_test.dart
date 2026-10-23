@@ -70,6 +70,11 @@ const List<_Field> _fields = [
   ('highBetaShort', _highBetaShort),
   ('lowGammaShort', _lowGammaShort),
   ('highGammaShort', _highGammaShort),
+  ('signalOffline', _signalOffline),
+  ('signalBadHint', _signalBadHint),
+  ('reconnecting', _reconnecting),
+  ('reconnectingHint', _reconnectingHint),
+  ('demoChip', _demoChip),
 ];
 
 String _playerMode(AppStrings s) => s.playerMode;
@@ -132,6 +137,11 @@ String _lowBetaShort(AppStrings s) => s.lowBetaShort;
 String _highBetaShort(AppStrings s) => s.highBetaShort;
 String _lowGammaShort(AppStrings s) => s.lowGammaShort;
 String _highGammaShort(AppStrings s) => s.highGammaShort;
+String _signalOffline(AppStrings s) => s.signalOffline;
+String _signalBadHint(AppStrings s) => s.signalBadHint;
+String _reconnecting(AppStrings s) => s.reconnecting;
+String _reconnectingHint(AppStrings s) => s.reconnectingHint;
+String _demoChip(AppStrings s) => s.demoChip;
 
 /// Claves nuevas de esta iteración (las que faltaban para cerrar el i18n).
 const List<String> _newKeys = [
@@ -157,11 +167,16 @@ const List<String> _newKeys = [
   'highBetaShort',
   'lowGammaShort',
   'highGammaShort',
+  'signalOffline',
+  'signalBadHint',
+  'reconnecting',
+  'reconnectingHint',
+  'demoChip',
 ];
 
 /// Claves cuyo texto es legítimamente idéntico en ambos idiomas (marca
 /// registrada / término técnico que no se traduce).
-const Set<String> _sameInBoth = {'bluetooth', 'demo'};
+const Set<String> _sameInBoth = {'bluetooth', 'demo', 'demoChip'};
 
 void main() {
   late Directory tmp;
@@ -209,6 +224,12 @@ void main() {
       expect(AppStrings.en.gameMode, 'Game mode');
       expect(AppStrings.en.rematch, 'Rematch');
       expect(AppStrings.en.leave, 'Leave');
+      // Textos de diagnóstico de señal (Track D).
+      expect(AppStrings.es.signalOffline, 'SIN SEÑAL');
+      expect(AppStrings.en.signalOffline, 'NO SIGNAL');
+      expect(AppStrings.es.reconnecting, 'RECONECTANDO');
+      expect(AppStrings.en.reconnecting, 'RECONNECTING');
+      expect(AppStrings.es.demoChip, AppStrings.en.demoChip, reason: 'DEMO');
       expect(
         [AppStrings.es.analysis, AppStrings.es.signal].join(),
         'AnálisisSeñal',
@@ -323,12 +344,12 @@ void main() {
 
     test('conserva otras claves y tolera fichero corrupto', () async {
       final f = File('${tmp.path}/${LocaleSettingsStore.fileName}');
-      await f.writeAsString(jsonEncode({'theme': 'evangelion'}));
+      await f.writeAsString(jsonEncode({'theme': 'neon'}));
       final st = storeIn(tmp);
 
       await st.writeLocale('en');
       final data = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
-      expect(data['theme'], 'evangelion');
+      expect(data['theme'], 'neon');
       expect(data[LocaleSettingsStore.localeKey], 'en');
 
       await f.writeAsString('{no es json');

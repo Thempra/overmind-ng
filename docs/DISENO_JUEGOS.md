@@ -40,7 +40,7 @@ resultados con récord/rachas. Sesión total 10-15 min (<10 años), 2×15 (mayor
 
 ### A. DUELO (existente, retocado) — 8+
 - 2 jugadores EEG (o demo). Atención=ataque, meditación=escudo, **parpadeo=escudo de emergencia** (única acción instantánea; refractario 2 s).
-- Cambios: HP 100→260, daño comprimido, TTK objetivo 60-90 s. Temas Evangelion/Superpoderes.
+- Cambios: HP 100→260, daño comprimido, TTK objetivo 60-90 s. Temas Neón/Cósmico.
 - Antecedentes: Mindball, meditation-deathmatch, duelo seesaw validado científicamente (PMID 35882224).
 
 ### B. GLOBOS ZEN — 6+ (meditación)

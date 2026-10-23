@@ -45,38 +45,38 @@ class BattleTheme {
 
   String name(String lang) => lang == 'en' ? nameEn : nameEs;
 
-  static const evangelion = BattleTheme(
-    id: 'evangelion',
-    nameEs: 'Evangelion',
-    nameEn: 'Evangelion',
-    background: 'game_background2.jpg',
-    leftImage: 'eva01.png',
-    rightImage: 'sachiel.png',
+  static const neon = BattleTheme(
+    id: 'neon',
+    nameEs: 'Neón',
+    nameEn: 'Neon',
+    background: 'bg_neon.png',
+    leftImage: 'fighter_vector.png',
+    rightImage: 'fighter_orbe.png',
     leftBall: 'fireball_blue.png',
     rightBall: 'fireball.png',
     leftColor: Color(0xFF35B6FF),
     rightColor: Color(0xFFFF4B4B),
-    leftName: 'EVA-01',
-    rightName: 'SACHIEL',
+    leftName: 'VECTOR',
+    rightName: 'ORBE',
   );
 
-  static const superpoderes = BattleTheme(
-    id: 'superpoderes',
-    nameEs: 'Superpoderes',
-    nameEn: 'Superpowers',
-    background: 'background_superpoderes.png',
-    leftImage: 'Elsa.png',
-    rightImage: 'Rumi.png',
+  static const cosmico = BattleTheme(
+    id: 'cosmico',
+    nameEs: 'Cósmico',
+    nameEn: 'Cosmic',
+    background: 'bg_cosmico.png',
+    leftImage: 'fighter_prisma.png',
+    rightImage: 'fighter_nebula.png',
     leftBall: 'fireball_blue.png',
     rightBall: 'fireball_purple.png',
-    leftColor: Color(0xFF4FC3F7),
-    rightColor: Color(0xFF9C27B0),
-    leftName: 'ELSA',
-    rightName: 'RUMI',
+    leftColor: Color(0xFFFFC24B),
+    rightColor: Color(0xFFB07BFF),
+    leftName: 'PRISMA',
+    rightName: 'NEBULA',
   );
 
-  static const all = [evangelion, superpoderes];
+  static const all = [neon, cosmico];
 
   static BattleTheme byId(String id) =>
-      all.firstWhere((t) => t.id == id, orElse: () => evangelion);
+      all.firstWhere((t) => t.id == id, orElse: () => neon);
 }

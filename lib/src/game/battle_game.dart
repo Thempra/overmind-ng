@@ -8,9 +8,14 @@ import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flame/particles.dart';
 
+import '../ble/mind_source.dart';
+import '../eeg/signal_quality.dart';
+import '../i18n/l10n.dart';
 import '../state/eeg_store.dart';
 import 'battle_logic.dart';
 import 'battle_theme.dart';
+import 'signal_chip.dart';
+import 'signal_monitor.dart';
 
 // ===========================================================================
 //  Overmind — Fighting 1v1 (FLAME)
@@ -31,8 +36,9 @@ class BattleGame extends FlameGame with TapCallbacks {
     required this.store,
     required this.player1Slot,
     required this.player2Slot,
-    this.theme = BattleTheme.evangelion,
+    this.theme = BattleTheme.neon,
     this.tuning = const BattleTuning(),
+    this.strings = AppStrings.es,
   });
 
   final EegStore store;
@@ -43,6 +49,20 @@ class BattleGame extends FlameGame with TapCallbacks {
   /// Ajustes de balance del duelo (ver [BattleTuning]).
   final BattleTuning tuning;
 
+  /// Textos ES/EN de la banda de aviso y del overlay de reconexión.
+  final AppStrings strings;
+
+  /// Vigilantes de señal: uno por jugador. Pausan el motor SOLO por ausencia
+  /// de paquetes (2,5 s), nunca por umbral de `poorSignal`.
+  final SignalMonitor monitor1 = SignalMonitor();
+  final SignalMonitor monitor2 = SignalMonitor();
+
+  /// `true` mientras la partida está detenida esperando al casco.
+  ///
+  /// OJO: no se llama `paused` porque [FlameGame] ya expone ese nombre (y
+  /// desactivaría el propio `update` del juego, incluido el watchdog).
+  bool get signalPaused => logic.paused;
+
   /// Simulación pura del duelo: sin Flame, sin Canvas, sin audio.
   late final BattleLogic logic = BattleLogic(tuning: tuning);
 
@@ -51,6 +71,7 @@ class BattleGame extends FlameGame with TapCallbacks {
   final List<Fireball> _fireballs = [];
   Hud? _hud;
   VsBanner? _vsBanner;
+  SignalOverlay? _signalOverlay;
   AudioPlayer? _pew;
   AudioPlayer? _hit;
   bool _audioOk = false;
@@ -108,6 +129,12 @@ class BattleGame extends FlameGame with TapCallbacks {
     _vsBanner = VsBanner(theme)..priority = 50;
     add(_vsBanner!);
 
+    _signalOverlay = SignalOverlay(() => strings)..priority = 45;
+    add(_signalOverlay!);
+
+    monitor1.start(store.devices[player1Slot]);
+    monitor2.start(store.devices[player2Slot]);
+
     try {
       _pew = AudioPlayer();
       await _pew!.setSource(AssetSource('audio/pew_pew_lei.wav'));
@@ -164,6 +191,8 @@ class BattleGame extends FlameGame with TapCallbacks {
 
     _hud?.size = _res;
     _hud?.setScale(_k);
+    _signalOverlay?.size = _res;
+    _signalOverlay?.setScale(_k);
     _vsBanner?.size = _res;
     _vsBanner?.setScale(_k);
   }
@@ -229,6 +258,45 @@ class BattleGame extends FlameGame with TapCallbacks {
     // Refrescar los datos EEG de cada luchador.
     final e1 = store.devices[player1Slot];
     final e2 = store.devices[player2Slot];
+
+    // ---- Watchdog de señal (por AUSENCIA de paquetes, no por umbral) ----
+    // Un EEG real oscila: poorSignal sube y baja sin que el casco se caiga.
+    // Por eso la pausa solo depende de que dejen de llegar paquetes 2,5 s.
+    final s1 = monitor1.tick(e1, dt);
+    final s2 = monitor2.tick(e2, dt);
+    _hud?.updateSignal(
+      quality1: e1?.signalQuality ?? SignalQuality.unknown,
+      quality2: e2?.signalQuality ?? SignalQuality.unknown,
+      demo1: _isDemo(player1Slot),
+      demo2: _isDemo(player2Slot),
+      offlineLabel: strings.signalOffline,
+      demoLabel: strings.demoChip,
+    );
+    _signalOverlay?.updateSignal(
+      state1: s1,
+      state2: s2,
+      demo1: _isDemo(player1Slot),
+      demo2: _isDemo(player2Slot),
+      strings: strings,
+    );
+
+    final lost = s1 == SignalWatchState.lost || s2 == SignalWatchState.lost;
+    if (lost) {
+      // Pausa automática: el duelo se congela y se muestra el overlay de
+      // reconexión. Al volver los paquetes se reanuda solo (más abajo).
+      if (logic.pauseEngine()) _clearFireballs();
+      _signalOverlay?.markPaused();
+      return;
+    }
+    // Reconexión: basta con que vuelvan los paquetes de los dos lados.
+    // (Si solo uno perdió el enlace, el otro nunca estuvo en pausa: exigir
+    // `takeResume()` en ambos dejaría la partida congelada para siempre.)
+    final resumed = monitor1.takeResume() | monitor2.takeResume();
+    if (logic.paused && resumed && monitor1.linkAlive && monitor2.linkAlive) {
+      logic.resumeEngine();
+      _signalOverlay?.markResumed();
+    }
+
     logic.readEeg(1,
         attention: e1?.attention.toDouble() ?? 0,
         meditation: e1?.meditation.toDouble() ?? 0);
@@ -261,6 +329,21 @@ class BattleGame extends FlameGame with TapCallbacks {
     // El centro lo manda la simulación (incluye la flotación idle).
     player1!.applyLogicCenter(logic.centerOf(1));
     player2!.applyLogicCenter(logic.centerOf(2));
+  }
+
+  /// `true` si el slot es un dispositivo simulado (chip DEMO en el HUD).
+  bool _isDemo(int slot) {
+    final src = store.sources[slot];
+    return src is SimulatedMindSource;
+  }
+
+  /// Retira del árbol los proyectiles en vuelo (al pausar por pérdida de
+  /// señal no queremos que queden bolas congeladas en pantalla).
+  void _clearFireballs() {
+    for (final b in _fireballs) {
+      b.removeFromParent();
+    }
+    _fireballs.clear();
   }
 
   void _spawnFireball(Projectile p) {
@@ -304,10 +387,10 @@ class BattleGame extends FlameGame with TapCallbacks {
     winner = null;
     _vsTimer = 2.2;
     logic.restart();
-    for (final b in _fireballs) {
-      b.removeFromParent();
-    }
-    _fireballs.clear();
+    _clearFireballs();
+    monitor1.start(store.devices[player1Slot]);
+    monitor2.start(store.devices[player2Slot]);
+    _signalOverlay?.markResumed();
     player1!.applyLogicCenter(logic.centerOf(1));
     player2!.applyLogicCenter(logic.centerOf(2));
     overlays.remove('gameOver');
@@ -401,10 +484,12 @@ class Fighter extends PositionComponent {
   /// `screen` = resolución real del widget; el lado lo fija [state].
   void layoutAt(Vector2 screen, double s) {
     k = s;
-    size.setValues(
-      image.width.toDouble() * 1.15 * s,
-      image.height.toDouble() * 1.15 * s,
-    );
+    // Altura del luchador = 34.6% de la altura de pantalla, derivada del
+    // aspecto del sprite. Se expresa como fracción (no en píxeles del PNG)
+    // para que el arte pueda generarse a 2x sin cambiar el encuadre.
+    final h = screen.y * 0.346;
+    final w = h * image.width / image.height;
+    size.setValues(w, h);
     final margin = 20.0 * s;
     centerHome.setValues(
       side == 1 ? size.x / 2 + margin : screen.x - size.x / 2 - margin,
@@ -451,7 +536,7 @@ class Fighter extends PositionComponent {
       canvas.drawCircle(Offset(cx, cy), size.x * 0.62, ring);
     }
 
-    // ---- Sprite del Eva ----
+    // ---- Sprite del luchador ----
     final flash = hitFlash > 0;
     final spritePaint = Paint();
     if (flash) {
@@ -627,7 +712,36 @@ class Hud extends PositionComponent {
   double shieldP1 = 0, shieldP2 = 0;
   double _k = 1;
 
+  /// Calidad de señal por lado (chip de 4 barras entre las barras de HP).
+  SignalQuality quality1 = SignalQuality.unknown;
+  SignalQuality quality2 = SignalQuality.unknown;
+
+  /// `true` si el slot es un dispositivo simulado (chip DEMO gris).
+  bool demo1 = false;
+  bool demo2 = false;
+
+  /// Etiquetas i18n del chip, inyectadas por el juego.
+  String offlineLabel = 'SIN SEÑAL';
+  String demoLabel = 'DEMO';
+
   void setScale(double s) => _k = s;
+
+  /// Actualiza la calidad de señal mostrada y las marcas DEMO.
+  void updateSignal({
+    required SignalQuality quality1,
+    required SignalQuality quality2,
+    bool demo1 = false,
+    bool demo2 = false,
+    String? offlineLabel,
+    String? demoLabel,
+  }) {
+    this.quality1 = quality1;
+    this.quality2 = quality2;
+    this.demo1 = demo1;
+    this.demo2 = demo2;
+    if (offlineLabel != null) this.offlineLabel = offlineLabel;
+    if (demoLabel != null) this.demoLabel = demoLabel;
+  }
 
   void updateData(Fighter? a, Fighter? b) {
     p1 = a;
@@ -706,6 +820,68 @@ class Hud extends PositionComponent {
       ..strokeWidth = 2 * k;
     canvas.drawLine(
         Offset(0, top + barH + 60 * k), Offset(w, top + barH + 60 * k), line);
+
+    // Chips de calidad de señal, centrados entre las dos barras de HP.
+    // "Desconectado" (unknown/offline) pinta CERO barras: es imposible que el
+    // estado sin contacto se vea como señal llena.
+    final cx = w / 2;
+    final chipY = top + 2 * k;
+    final leftChip = layoutSignalChip(
+      quality: quality1,
+      origin: Offset(cx - 4 * k, chipY),
+      scale: k,
+      isDemo: demo1,
+      alignRight: true,
+      disconnectedLabel: offlineLabel,
+      demoLabel: demoLabel,
+    );
+    final rightChip = layoutSignalChip(
+      quality: quality2,
+      origin: Offset(cx + 4 * k, chipY),
+      scale: k,
+      isDemo: demo2,
+      disconnectedLabel: offlineLabel,
+      demoLabel: demoLabel,
+    );
+    _signalChip(canvas, leftChip, k);
+    _signalChip(canvas, rightChip, k);
+  }
+
+  /// Pinta un chip de señal ya calculado (geometría pura en [signal_chip]).
+  void _signalChip(Canvas canvas, SignalChipLayout chip, double k) {
+    final r = RRect.fromRectAndRadius(chip.chipRect, Radius.circular(6 * k));
+    canvas.drawRRect(r, Paint()..color = SignalChipColors.background);
+    canvas.drawRRect(
+        r,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2 * k
+          ..color = SignalChipColors.outline);
+
+    for (var i = 0; i < chip.bars.length; i++) {
+      final fill = chip.fills[i];
+      final bar =
+          RRect.fromRectAndRadius(chip.bars[i], Radius.circular(1.5 * k));
+      canvas.drawRRect(bar, Paint()..color = SignalChipColors.empty);
+      if (fill != null) canvas.drawRRect(bar, Paint()..color = fill);
+    }
+
+    // La etiqueta "SIN SEÑAL" se pinta en rojo para no confundirse con una
+    // lectura válida; DEMO en gris; el porcentaje en el color de la señal.
+    final Color labelColor;
+    if (chip.isDemo) {
+      labelColor = SignalChipColors.demo;
+    } else if (!chip.quality.hasContact) {
+      labelColor = SignalChipColors.weak;
+    } else {
+      labelColor = switch (chip.quality) {
+        SignalQuality.good => SignalChipColors.good,
+        SignalQuality.fair => SignalChipColors.fair,
+        _ => SignalChipColors.poor,
+      };
+    }
+    drawText(canvas, chip.label, chip.labelPosition.dx, chip.labelPosition.dy,
+        13 * k, labelColor, 64 * k);
   }
 
   void _bar(Canvas canvas, double x, double y, double w, FighterState? st,
@@ -776,7 +952,7 @@ class Hud extends PositionComponent {
 }
 
 // ===========================================================================
-//  VsBanner — cartel de presentación del combate (EVA-01 vs SACHIEL)
+//  VsBanner — cartel de presentación del combate (luchador izq. vs der.)
 // ===========================================================================
 class VsBanner extends PositionComponent {
   VsBanner(this.theme);
@@ -840,6 +1016,130 @@ class VsBanner extends PositionComponent {
       fontWeight: FontWeight.w900,
       shadows: const [
         Shadow(color: Color(0xDD000000), blurRadius: 6, offset: Offset(2, 2)),
+      ],
+    ));
+    pb.addText(text);
+    final para = pb.build()..layout(ParagraphConstraints(width: width));
+    canvas.drawParagraph(para, Offset(x, y));
+  }
+}
+
+// ===========================================================================
+//  SignalOverlay — banda de aviso de señal y overlay de reconexión
+// ===========================================================================
+/// Capa de diagnóstico de señal sobre la partida.
+///
+/// Dos estados visuales, ambos alimentados por [SignalMonitor]:
+///  * **Banda de aviso** (ámbar): la señal es mala (sin contacto o muy
+///    débil) durante más de 3 s, pero siguen llegando paquetes y la partida
+///    NO se detiene.
+///  * **Overlay de reconexión** (scrim oscuro + texto): no llegan paquetes
+///    desde hace 2,5 s; el motor está pausado y se reanuda solo.
+class SignalOverlay extends PositionComponent {
+  SignalOverlay(this._strings);
+
+  final AppStrings Function() _strings;
+
+  SignalWatchState state1 = SignalWatchState.ok;
+  SignalWatchState state2 = SignalWatchState.ok;
+  bool demo1 = false;
+  bool demo2 = false;
+  bool pausedNow = false;
+  double _k = 1;
+  double _t = 0;
+
+  void setScale(double s) => _k = s;
+
+  /// `true` si al menos un lado tiene enlace perdido.
+  bool get isLost =>
+      state1 == SignalWatchState.lost || state2 == SignalWatchState.lost;
+
+  /// `true` si hay banda de aviso que pintar (mala señal sostenida o pausa).
+  bool get showsWarning =>
+      isLost ||
+      state1 == SignalWatchState.degraded ||
+      state2 == SignalWatchState.degraded;
+
+  void updateSignal({
+    required SignalWatchState state1,
+    required SignalWatchState state2,
+    bool demo1 = false,
+    bool demo2 = false,
+    AppStrings? strings,
+  }) {
+    this.state1 = state1;
+    this.state2 = state2;
+    this.demo1 = demo1;
+    this.demo2 = demo2;
+  }
+
+  void markPaused() => pausedNow = true;
+
+  void markResumed() => pausedNow = false;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _t += dt;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (!showsWarning) return;
+    final k = _k;
+    final s = _strings();
+
+    if (isLost) {
+      _renderReconnecting(canvas, k, s);
+    } else {
+      _renderWarningBanner(canvas, k, s);
+    }
+  }
+
+  void _renderWarningBanner(Canvas canvas, double k, AppStrings s) {
+    final pulse = 0.75 + 0.25 * math.sin(_t * 4);
+    final h = 34.0 * k;
+    final y = size.y - h - 24 * k;
+    final rect = Rect.fromLTWH(24 * k, y, size.x - 48 * k, h);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(8 * k)),
+      Paint()..color = const Color(0xE6B26A00).withValues(alpha: 0.9 * pulse),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(8 * k)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2 * k
+        ..color = const Color(0xFFFFD54F),
+    );
+    _text(canvas, '!  ${s.signalBadHint}', rect.left + 14 * k, y + 7 * k,
+        18 * k, const Color(0xFFFFF3E0), rect.width - 28 * k);
+  }
+
+  void _renderReconnecting(Canvas canvas, double k, AppStrings s) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.x, size.y),
+      Paint()..color = const Color(0xB3000000),
+    );
+    final w = 520 * k;
+    final x = (size.x - w) / 2;
+    final y = size.y * 0.34;
+    final pulse = 0.6 + 0.4 * math.sin(_t * 3);
+    _text(canvas, s.reconnecting, x, y, 46 * k,
+        const Color(0xFFFF7043).withValues(alpha: pulse), w);
+    _text(canvas, s.reconnectingHint, x, y + 62 * k, 20 * k,
+        const Color(0xFFE0E0E0), w);
+  }
+
+  void _text(Canvas canvas, String text, double x, double y, double size,
+      Color color, double width) {
+    final pb = ParagraphBuilder(ParagraphStyle(textAlign: TextAlign.center));
+    pb.pushStyle(TextStyle(
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.w900,
+      shadows: const [
+        Shadow(color: Color(0xDD000000), blurRadius: 6, offset: Offset(1, 1)),
       ],
     ));
     pb.addText(text);

@@ -1,23 +1,42 @@
 import 'package:flutter/foundation.dart';
 
+import 'signal_quality.dart';
+
 /// Datos EEG de un dispositivo MindWave (NeuroSky ThinkGear).
 ///
 /// Port directo del modelo [Eeg] del proyecto Android original
 /// (overmind/src/net/thempra/overmind/Eeg.java), ampliado con valores
 /// crudos de banda y la normalización porcentual que usaba el original.
+///
+/// ## Modelo de señal (corregido)
+///
+/// `signal` guarda el `poorSignal` CRUDO de ThinkGear (0 = contacto
+/// perfecto, 200 = sin contacto). Antes `reset()` ponía `signal = 0`, con lo
+/// que "desconectado" se pintaba como "señal perfecta". Ahora:
+///
+///  * [hasData] distingue "nunca llegó un paquete" ([SignalQuality.unknown])
+///    de "llegó un paquete sin contacto" ([SignalQuality.offline]).
+///  * [signalQuality] es la única fuente de verdad para el HUD.
+///  * [lastUpdate]/[packetSeq] alimentan el watchdog de ausencia de paquetes.
 class EegData extends ChangeNotifier {
   EegData({
     required this.address,
     required this.name,
     required this.slot,
-  });
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
 
   String address;
   String name;
   int slot;
 
-  /// Calidad de señal: 0 = buena, 200 = sin señal (Poor Signal de ThinkGear).
-  int signal = 0;
+  final DateTime Function() _clock;
+
+  /// `poorSignal` crudo de ThinkGear: 0 = buena, 200 = sin contacto.
+  ///
+  /// Un valor de [kSignalNoContact] con [hasData] en false significa
+  /// "desconocido"; nunca "señal perfecta".
+  int signal = kSignalNoContact;
 
   int attention = 0;
   int meditation = 0;
@@ -37,6 +56,28 @@ class EegData extends ChangeNotifier {
   double rawHighBeta = 0;
   double rawLowGamma = 0;
   double rawHighGamma = 0;
+
+  bool _hasData = false;
+
+  /// `true` si ha llegado al menos un paquete desde el último [reset].
+  bool get hasData => _hasData;
+
+  /// Timestamp del último paquete recibido (null si nunca hubo).
+  DateTime? lastUpdate;
+
+  /// Contador monótono de paquetes recibidos (incluye los de poorSignal=200:
+  /// un paquete sin contacto sigue demostrando que el enlace está vivo).
+  int packetSeq = 0;
+
+  /// Calidad de señal explícita para el HUD (nunca "perfecta" sin datos).
+  SignalQuality get signalQuality => signalQualityOf(signal, hasData: _hasData);
+
+  /// Segundos desde el último paquete, o null si nunca llegó ninguno.
+  double? get secondsSinceUpdate {
+    final last = lastUpdate;
+    if (last == null) return null;
+    return _clock().difference(last).inMicroseconds / 1e6;
+  }
 
   /// Normalización original del proyecto Android:
   /// prodelta = (1/rawdelta) * 1_000_000   y luego  * 100 / 1800.
@@ -72,14 +113,21 @@ class EegData extends ChangeNotifier {
     int blinkStrength = 0,
     bool blinkDetected = false,
   }) {
-    // El original solo actualizaba si la señal era "buena" (signal > 0,
-    // porque en aquel formato signal = 200 - poorSignal). Aquí tratamos
-    // poorSignal directamente: si es mala, seguimos mostrando nuevos datos
-    // pero con señal marcada; mantenemos el comportamiento de cero cuando
-    // no hay señal real (poorSignal >= 200).
-    this.signal = signal;
-    if (signal >= 200) {
-      reset();
+    // Todo paquete prueba que el enlace está vivo, aunque no haya contacto:
+    // por eso `packetSeq`/`lastUpdate` se actualizan ANTES del corte por
+    // poorSignal y el watchdog nunca confunde "sin contacto" con
+    // "sin paquetes".
+    _hasData = true;
+    this.signal = signal.clamp(0, kSignalNoContact);
+    lastUpdate = _clock();
+    packetSeq++;
+
+    if (signal >= kSignalNoContact) {
+      // Sin contacto en la piel no hay lectura válida: los valores derivados
+      // se ponen a cero (comportamiento del original), pero `signal` conserva
+      // el 200 para que el HUD muestre "sin señal" y no barras llenas.
+      _clearReading();
+      notifyListeners();
       return;
     }
     this.attention = attention;
@@ -115,14 +163,23 @@ class EegData extends ChangeNotifier {
 
   bool _blinkPending = false;
 
-  void reset() {
-    signal = 0;
+  /// Limpia los valores derivados conservando la calidad de señal conocida.
+  void _clearReading() {
     attention = 0;
     meditation = 0;
     blinkStrength = 0;
     blinkDetected = false;
     rawDelta = rawTheta = rawLowAlpha = rawHighAlpha = 0;
     rawLowBeta = rawHighBeta = rawLowGamma = rawHighGamma = 0;
+  }
+
+  /// Vuelve al estado "sin datos": calidad [SignalQuality.unknown], NUNCA
+  /// "señal perfecta". Se llama al (re)conectar un dispositivo.
+  void reset() {
+    _hasData = false;
+    signal = kSignalNoContact;
+    lastUpdate = null;
+    _clearReading();
     notifyListeners();
   }
 

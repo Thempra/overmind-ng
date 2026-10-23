@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget {
                     const TextSpan(text: 'OVER'),
                     TextSpan(
                       text: 'MIND',
-                      style: TextStyle(color: OvermindColors.evaCyan),
+                      style: TextStyle(color: OvermindColors.p1Cyan),
                     ),
                   ],
                 ),
@@ -80,7 +80,7 @@ class HomeScreen extends StatelessWidget {
                   letterSpacing: 4,
                   color: OvermindColors.text,
                   shadows: [
-                    Shadow(color: OvermindColors.evaCyan, blurRadius: 16),
+                    Shadow(color: OvermindColors.p1Cyan, blurRadius: 16),
                   ],
                 ),
               ),
@@ -112,9 +112,9 @@ class HomeScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _toggleItem(ctx, mode == OvermindMode.player, s.playerMode,
-              OvermindColors.evaCyan, OvermindMode.player),
+              OvermindColors.p1Cyan, OvermindMode.player),
           _toggleItem(ctx, mode == OvermindMode.researcher, s.researcherMode,
-              OvermindColors.sachielRed, OvermindMode.researcher),
+              OvermindColors.p2Red, OvermindMode.researcher),
         ],
       ),
     );
@@ -170,7 +170,7 @@ class _GameBackdrop extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Image.asset(
-          'assets/images/game_background.jpg',
+          'assets/images/bg_neon.png',
           fit: BoxFit.cover,
           opacity: const AlwaysStoppedAnimation(0.28),
           errorBuilder: (_, __, ___) => const SizedBox.shrink(),

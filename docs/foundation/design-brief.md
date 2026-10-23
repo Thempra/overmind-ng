@@ -1,6 +1,6 @@
 # Overmind NG — Design Brief
 
-Estética: **sci-fi oscuro estilo Evangelion HUD**, moderno y formal, sin
+Estética: **sci-fi oscuro tipo HUD de cabina**, moderno y formal, sin
 neón agresivo. Los acentos de color identifican bando/modo; los paneles se
 delimitan por fondo propio + borde sutil, no por bordes gordos.
 
@@ -12,8 +12,8 @@ delimitan por fondo propio + borde sutil, no por bordes gordos.
 | bgLighter | `#121A2B` | Botones filled |
 | panel | `#171F33` | Tarjetas, paneles, toggle |
 | panelBorder | `#24304D` | Bordes 1-1.2 px |
-| evaCyan | `#35B6FF` | Acento jugador 1 / modo Jugador / primaria |
-| sachielRed | `#FF4B4B` | Acento jugador 2 / modo Investigador / secundaria |
+| p1Cyan | `#35B6FF` | Acento jugador 1 / modo Jugador / primaria |
+| p2Red | `#FF4B4B` | Acento jugador 2 / modo Investigador / secundaria |
 | shield | `#B0F7FF` | Iconos utilitarios (ajustes, demo, idioma) |
 | yellow | `#FFE34D` | Destellos/avisos puntuales |
 | text | `#E8EEF6` | Texto principal |
@@ -27,7 +27,7 @@ atención `#00C800`, meditación `#0000C8`, ondas `#9900CC`.
 
 - Fuente system (Roboto/SF); jerarquía por peso: títulos **w900** con
   `letterSpacing` 1.5-4, cuerpo w400-700.
-- Wordmark **OVERMIND**: 30 px w900 ls 4, "MIND" en evaCyan, shadow cyan blur 16.
+- Wordmark **OVERMIND**: 30 px w900 ls 4, "MIND" en p1Cyan, shadow cyan blur 16.
 - Radios: 12 (botones), 14 (cards theme), 16-18 (cards grandes/toggle),
   círculo (icon-buttons 44 px).
 - Glow: `BoxShadow(accent.withOpacity(0.25-0.3), blurRadius 18-20)` solo en
@@ -50,7 +50,7 @@ atención `#00C800`, meditación `#0000C8`, ondas `#9900CC`.
 - **Overlays de sesión**: calibración = negro@87 centrado (icono 48 accent,
   consigna 22 w800, barra 260 px accent, %); resultados = tarjeta `#10141C`
   radio 20 borde accent@0.7, marcador 56 w900.
-- **Backdrop Home**: `game_background.jpg` al 28% + gradiente vertical
+- **Backdrop Home**: `bg_neon.png` al 28% + gradiente vertical
   `#E60A0E16 → bg`.
 
 ## 4. Pantallas (aspecto exacto)
@@ -60,7 +60,7 @@ atención `#00C800`, meditación `#0000C8`, ondas `#9900CC`.
 2. **PlayerModeView**: línea "Conectados: N" (textDim w700 ls1), "Selecciona
    juego" 22 w900, grid 3 col (≥680 px) / 2 col, ratio 1.05/0.78, gap 12.
 3. **Battle**: fullscreen inmersivo; fondo del tema; 2 luchadores con aura
-   (izq. cyan/EVA, der. rojo/SACHIEL o según tema); barras HP superiores con
+   (izq. p1Cyan / der. p2Red, o los colores del tema); barras HP superiores con
    nombres del tema; VS banner 2.2 s; overlay fin = caja negra@75, ganador
    40 px, [Revancha] filled, [Salir] outlined.
 4. **MindGameSession**: fondo `#0A0E16`; HUD superior (título accent ls2,
@@ -85,4 +85,4 @@ atención `#00C800`, meditación `#0000C8`, ondas `#9900CC`.
 ## 6. Referencias visuales del repo
 
 `docs/home_screen.png`, `home_researcher.png`, `game_screen.png`,
-`settings_themes.png`, `superpoderes_battle.png`, `icon_preview.png`.
+`settings_themes.png`, `battle_art_preview.png`, `icon_preview.png`.

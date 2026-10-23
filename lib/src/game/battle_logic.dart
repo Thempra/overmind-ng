@@ -332,6 +332,27 @@ class BattleLogic {
   bool suddenDeath = false;
   bool finished = false;
 
+  /// Motor en pausa: el duelo se congela sin perder estado ni tiempo.
+  ///
+  /// Se usa cuando el casco deja de emitir ([SignalMonitor]): pausar evita que
+  /// la partida se decida por datos viejos congelados. Con `paused` en true,
+  /// [update] no avanza el tiempo ni simula nada.
+  bool paused = false;
+
+  /// Pausa el motor (idempotente). Devuelve `true` si cambió el estado.
+  bool pauseEngine() {
+    if (paused || finished) return false;
+    paused = true;
+    return true;
+  }
+
+  /// Reanuda el motor (idempotente). Devuelve `true` si cambió el estado.
+  bool resumeEngine() {
+    if (!paused) return false;
+    paused = false;
+    return true;
+  }
+
   /// Resultado, o null mientras se juega.
   DuelEnded? get outcome => finished ? _end.first : null;
 
@@ -353,6 +374,7 @@ class BattleLogic {
     time = 0;
     suddenDeath = false;
     finished = false;
+    paused = false;
   }
 
   /// Alimenta la lectura EEG de un luchador (0-100).
@@ -381,9 +403,12 @@ class BattleLogic {
   }
 
   /// Avanza la simulación [dt] segundos y devuelve los eventos del frame.
+  ///
+  /// Con [paused] activo no avanza nada (ni tiempo ni proyectiles): el duelo
+  /// queda congelado hasta [resumeEngine].
   List<BattleEvent> update(double dt) {
     final events = <BattleEvent>[];
-    if (finished) return events;
+    if (finished || paused) return events;
     time += dt;
 
     for (final f in [left, right]) {

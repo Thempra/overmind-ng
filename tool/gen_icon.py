@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Genera icono de app 'Overmind' en clave del juego (duelo EEG):
-onda cerebral + barra de poder EVA(cian) vs SACHIEL(rojo) sobre fondo oscuro.
+onda cerebral + barra de poder jugador 1 (cian) vs jugador 2 (rojo) sobre fondo oscuro.
 Base 512x512 RGBA opaco, esquinas redondeadas suaves."""
 import math, os, struct, zlib
 

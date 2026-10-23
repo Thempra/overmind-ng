@@ -40,7 +40,7 @@ class ResearcherModeView extends StatelessWidget {
           icon: Icons.show_chart,
           title: s.attentionMeditation,
           subtitle: s.bluetooth,
-          accent: OvermindColors.evaCyan,
+          accent: OvermindColors.p1Cyan,
           big: true,
           onTap: () => _open(context, (slot) => DataAnalyzerScreen(slot: slot)),
         ),
@@ -49,7 +49,7 @@ class ResearcherModeView extends StatelessWidget {
           icon: Icons.graphic_eq,
           title: s.waveLevels,
           subtitle: s.bluetooth,
-          accent: OvermindColors.sachielRed,
+          accent: OvermindColors.p2Red,
           big: true,
           onTap: () =>
               _open(context, (slot) => LevelsMindScreen(slot: slot)),
