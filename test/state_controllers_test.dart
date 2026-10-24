@@ -114,10 +114,11 @@ void main() {
   group('BattleTheme / controller', () {
     test('byId conocido y fallback', () {
       expect(BattleTheme.byId('cosmico').id, 'cosmico');
+      expect(BattleTheme.byId('elsa_vs_rumi').id, 'elsa_vs_rumi');
       expect(BattleTheme.byId('no-existe').id, 'neon');
       expect(BattleTheme.neon.name('en'), 'Neon');
       expect(BattleTheme.cosmico.name('es'), 'Cósmico');
-      expect(BattleTheme.all, hasLength(2));
+      expect(BattleTheme.all, hasLength(3));
     });
 
     test('setTheme cambia y notifica una vez', () {

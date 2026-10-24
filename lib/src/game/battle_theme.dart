@@ -75,7 +75,22 @@ class BattleTheme {
     rightName: 'NEBULA',
   );
 
-  static const all = [neon, cosmico];
+  static const elsaVsRumi = BattleTheme(
+    id: 'elsa_vs_rumi',
+    nameEs: 'Elsa vs Rumi',
+    nameEn: 'Elsa vs Rumi',
+    background: 'game_background2.jpg',
+    leftImage: 'Elsa.png',
+    rightImage: 'Rumi.png',
+    leftBall: 'fireball_blue.png',
+    rightBall: 'fireball_purple.png',
+    leftColor: Color(0xFF7FD4FF),
+    rightColor: Color(0xFFFF5FA2),
+    leftName: 'ELSA',
+    rightName: 'RUMI',
+  );
+
+  static const all = [neon, cosmico, elsaVsRumi];
 
   static BattleTheme byId(String id) =>
       all.firstWhere((t) => t.id == id, orElse: () => neon);
