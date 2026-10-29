@@ -1,9 +1,11 @@
 name: security
-# Escáneres de seguridad → SonarQube + DefectDojo; deploy Coolify si todo va OK.
+# Escáneres de seguridad → SonarQube + DefectDojo.
 # Job único: el runner es compartido y los binarios de escáner son estáticos.
 # Sin actions/checkout ni artifacts (necesitan Node) — checkout con git + FORGEJO_TOKEN.
-# Secrets de org requeridos: DOJO_URL, DOJO_API_TOKEN, SONAR_TOKEN.
-# Opcionales p/ deploy: secret COOLIFY_API_TOKEN + vars COOLIFY_URL, COOLIFY_DEPLOY_UUIDS.
+#
+# Sin secretos de Forgejo: el job pide un ID token OIDC a Forgejo, lo canjea en
+# OpenBao y lee `secret/data/ci/shared/*` (Sonar + DefectDojo). El token vive lo
+# que dura el job (rol `ci-scan-apps|research|hardware`, 30 min).
 on:
   push:
     branches: [main, master, develop, dev]
@@ -22,11 +24,19 @@ jobs:
     timeout-minutes: 20
     container:
       image: cimg/base:current
+    # Requerido para que Forgejo inyecte ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN.
+    # Tiene que ir a nivel de job: Forgejo lo lee del payload del job.
+    enable-openid-connect: true
     env:
       PROJECT_KEY: ${{ vars.PRODUCT_NAME || github.repository }}
       REPO_PATH: ${{ github.repository }}
       COMMIT_SHA: ${{ github.sha }}
+      REF_NAME: ${{ github.ref_name }}
       GH_TOK: ${{ github.token }}
+      BAO_ADDR: https://vault.thempra.net
+      # Un rol JWT por organización: replica el alcance que tenían los secretos
+      # de org de Forgejo, sin ampliarlo.
+      BAO_ROLE: ci-scan-apps
     steps:
       - name: Checkout
         run: |
@@ -35,9 +45,41 @@ jobs:
           # Clavar el SHA disparado: evita inconsistencias entre ramas cuando el
           # workflow se rollout en una rama y el push va por otra.
           git init -q repo && cd repo && git remote add origin "$REPO_URL"
-          git fetch -q --depth 5 origin "$COMMIT_SHA" || git fetch -q --depth 5 origin "${{ github.ref_name }}"
+          git fetch -q --depth 5 origin "$COMMIT_SHA" || git fetch -q --depth 5 origin "$REF_NAME"
           git -c advice.detachedHead=false checkout -q FETCH_HEAD
           ls | head -5
+      - name: Secretos (OIDC → OpenBao)
+        # Canjea el ID token del job por un token de OpenBao y lo publica en
+        # GITHUB_ENV para los pasos siguientes. `::add-mask::` evita que el
+        # token aparezca en los logs si algún comando lo escupe en un error.
+        run: |
+          set -e
+          : "${ACTIONS_ID_TOKEN_REQUEST_URL:?sin OIDC — falta enable-openid-connect en el job}"
+          curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=openbao" > /tmp/idtoken.json
+          JWT=$(jq -r .value /tmp/idtoken.json)
+          curl -fsS -X POST "$BAO_ADDR/v1/auth/jwt/login" -H 'Content-Type: application/json' \
+            -d "$(jq -nc --arg r "$BAO_ROLE" --arg j "$JWT" '{role:$r,jwt:$j}')" > /tmp/login.json
+          TOK=$(jq -r '.auth.client_token // empty' /tmp/login.json)
+          [ -n "$TOK" ] || { echo "::error::login en OpenBao falló: $(jq -c .errors /tmp/login.json)"; exit 1; }
+          echo "::add-mask::$TOK"
+          rm -f /tmp/idtoken.json /tmp/login.json
+          fetch() {  # fetch <sonar|dojo> <VAR_PREFIX>
+            curl -fsS -H "X-Vault-Token: $TOK" "$BAO_ADDR/v1/secret/data/ci/shared/$1" > /tmp/sec.json
+            U=$(jq -r '.data.data.url' /tmp/sec.json)
+            T=$(jq -r '.data.data.token' /tmp/sec.json)
+            [ -n "$U" ] && [ "$U" != null ] || { echo "::error::ci/shared/$1 sin 'url'"; exit 1; }
+            [ -n "$T" ] && [ "$T" != null ] || { echo "::error::ci/shared/$1 sin 'token'"; exit 1; }
+            echo "::add-mask::$T"
+            echo "${2}_URL=$U" >> "$GITHUB_ENV"
+            echo "${2}_TOKEN=$T" >> "$GITHUB_ENV"
+          }
+          fetch sonar SONAR
+          fetch dojo DOJO
+          # dojo_upload.py lee DOJO_API_TOKEN; el KV lo llama 'token'.
+          echo "DOJO_API_TOKEN=$(grep '^DOJO_TOKEN=' "$GITHUB_ENV" | cut -d= -f2-)" >> "$GITHUB_ENV"
+          rm -f /tmp/sec.json
+          echo "secretos cargados (sonar+dojo)"
       - name: Tests + coverage (pre-Sonar)
         # Repos con marcador .security/pytest-cov: ejecutamos pytest --cov para
         # que el coverage.xml exista ANTES del análisis (sin eso Sonar mide 0%).
@@ -61,8 +103,9 @@ jobs:
               --continue-on-collection-errors -o addopts= ) || true
           ls -la "repo/$COVDIR/" | head -5
       - name: SonarQube (SAST + calidad) — 1er análisis
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        # El gate NO corta aquí: se evalúa igual, pero el rojo se emite en el
+        # último paso. Así los escáneres y DefectDojo reciben sus informes
+        # aunque el gate esté en rojo (antes se perdían todos: run 466 y 500).
         run: |
           set -e
           if [ ! -f repo/sonar-project.properties ]; then
@@ -73,10 +116,14 @@ jobs:
           curl -fsSL -o /tmp/sonar.zip https://repo1.maven.org/maven2/org/sonarsource/scanner/cli/sonar-scanner-cli/8.1.0.6389/sonar-scanner-cli-8.1.0.6389.zip
           sudo unzip -q -o /tmp/sonar.zip -d /opt
           cd repo
+          # Sin `-Dsonar.login`: el scanner lee SONAR_TOKEN del entorno, así el
+          # token no aparece en /proc/<pid>/cmdline (visible por cualquiera del
+          # contenedor y por `ps`).
           /opt/sonar-scanner-8.1.0.6389/bin/sonar-scanner \
-            -Dsonar.host.url=https://sast.thempra.net \
-            -Dsonar.login="$SONAR_TOKEN" -Dsonar.qualitygate.wait=true -Dsonar.scm.disabled=true
+            -Dsonar.host.url="$SONAR_URL" \
+            -Dsonar.qualitygate.wait=true -Dsonar.scm.disabled=true || echo "SONAR_GATE_FAILED=1" >> "$GITHUB_ENV"
       - name: Herramientas
+        if: always()
         run: |
           set -e
           sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip git curl >/dev/null
@@ -91,14 +138,21 @@ jobs:
           sudo python3 -m pip install --break-system-packages --no-cache-dir --quiet bandit semgrep checkov 2>/dev/null || true
           for b in bandit semgrep checkov; do command -v $b >/dev/null || sudo ln -sf "$HOME/.local/bin/$b" /usr/local/bin/$b 2>/dev/null || true; done
           export PATH="$HOME/.local/bin:$PATH"
+          mkdir -p scans
           gitleaks version; trivy --version | head -1; bandit --version 2>&1 | head -1; semgrep --version
       - name: gitleaks (secretos)
-        run: mkdir -p scans && gitleaks detect --source repo --no-git -f json -r scans/gitleaks.json || true
+        if: always()
+        run: |
+          mkdir -p scans
+          gitleaks detect --source repo --no-git -f json -r scans/gitleaks.json || true
       - name: trivy (deps/vulns)
+        if: always()
         run: cd repo && trivy fs --scanners vuln,secret --format json --output ../scans/trivy.json . || true
       - name: semgrep (SAST)
+        if: always()
         run: cd repo && semgrep scan --config auto --json --output ../scans/semgrep.json --metrics=off -q || true
       - name: checkov (IaC)
+        if: always()
         run: cd repo && checkov -d . -o json --quiet --soft-fail > ../scans/checkov.json || true
       - name: bandit (Python)
         if: always()
@@ -107,33 +161,22 @@ jobs:
             cd repo && bandit -r . -f json -o ../scans/bandit.json -q || true
           fi
       - name: Subir a DefectDojo
+        # DOJO_URL y DOJO_API_TOKEN llegan por GITHUB_ENV (paso "Secretos"):
+        # re-declararlos aquí con `${{ env.X }}` los sobrescribiría con vacío,
+        # porque ese contexto sólo ve el `env:` del workflow, no GITHUB_ENV.
         if: always()
         env:
-          DOJO_URL: ${{ secrets.DOJO_URL }}
-          DOJO_API_TOKEN: ${{ secrets.DOJO_API_TOKEN }}
           CI_UPLOAD_DIR: scans
-        run: python3 repo/.security/dojo_upload.py
-      - name: Deploy Coolify
-        # Solo si TODO lo anterior fue OK (escáneres, subida a Dojo y Sonar) y
-        # el repo tiene app desplegada (vars COOLIFY_DEPLOY_UUIDS + secret token).
-        if: success() && github.event_name != 'schedule'
-        env:
-          COOLIFY_URL: ${{ vars.COOLIFY_URL }}
-          COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-          DEPLOY_UUIDS: ${{ vars.COOLIFY_DEPLOY_UUIDS }}
         run: |
-          set -e
-          if [ -z "$DEPLOY_UUIDS" ] || [ -z "$COOLIFY_TOKEN" ]; then
-            echo "Sin COOLIFY_DEPLOY_UUIDS/COOLIFY_API_TOKEN — sin deploy."; exit 0
+          [ -f repo/.security/dojo_upload.py ] || { echo "sin dojo_upload.py — se omite"; exit 0; }
+          python3 repo/.security/dojo_upload.py
+
+      - name: Veredicto
+        # El gate de Sonar se difirió aquí a propósito: es lo único que puede
+        # dejar el job en rojo, y sólo después de haber alimentado DefectDojo.
+        run: |
+          if [ -n "$SONAR_GATE_FAILED" ]; then
+            echo "::error::SonarQube quality gate FAILED"
+            exit 1
           fi
-          COOLIFY_URL=${COOLIFY_URL:-https://orchestrator.thempra.net}
-          echo "192.168.50.5 orchestrator.thempra.net" | sudo tee -a /etc/hosts >/dev/null || true
-          for uuid in $DEPLOY_UUIDS; do
-            echo "→ deploy $uuid"
-            code=$(curl -sS -m 60 -o /tmp/dep.json -w '%{http_code}' \
-              -X POST "$COOLIFY_URL/api/v1/deployments/$uuid?pr=false&force=false" \
-              -H "Authorization: Bearer $COOLIFY_TOKEN")
-            cat /tmp/dep.json; echo
-            [ "$code" = "200" ] || { echo "deploy $uuid falló (HTTP $code)"; exit 1; }
-            sleep 5
-          done
+          echo "gate OK o sin proyecto Sonar"
