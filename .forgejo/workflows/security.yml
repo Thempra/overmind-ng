@@ -150,7 +150,7 @@ jobs:
         run: cd repo && trivy fs --scanners vuln,secret --format json --output ../scans/trivy.json . || true
       - name: semgrep (SAST)
         if: always()
-        run: cd repo && semgrep scan --config auto --json --output ../scans/semgrep.json --metrics=off -q || true
+        run: cd repo && semgrep scan --config p/default --json --output ../scans/semgrep.json --metrics=off -q || true
       - name: checkov (IaC)
         if: always()
         run: cd repo && checkov -d . -o json --quiet --soft-fail > ../scans/checkov.json || true
